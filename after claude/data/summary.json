@@ -1,0 +1,40 @@
+{
+  "run_id": "aws-extended-20260924T113201Z",
+  "counts_per_configuration": {
+    "cold": 15,
+    "warm": 15,
+    "memory": 3
+  },
+  "modes": {
+    "cold": {
+      "baseline_ms": 1.387985,
+      "pqc_median_range_ms": [
+        3.50345,
+        11.287048
+      ]
+    },
+    "warm": {
+      "baseline_ms": 0.537675,
+      "pqc_median_range_ms": [
+        2.403466,
+        10.528775
+      ]
+    }
+  },
+  "memory": {
+    "client": {
+      "baseline_kib": 460,
+      "pqc_median_range_kib": [
+        648,
+        980
+      ]
+    },
+    "server": {
+      "baseline_kib": 420,
+      "pqc_median_range_kib": [
+        628,
+        1252
+      ]
+    }
+  }
+}

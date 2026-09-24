@@ -62,7 +62,7 @@ def cleanup():
     if errors:
         raise RuntimeError('; '.join(errors))
 
-def deploy(image):
+def deploy(image, extended=False):
     # Secret에 등록한 서버·클라이언트 ID를 읽는다. 기존 프로젝트의 다른 인스턴스를 검색해 선택하지 않는다.
     ids = {r: os.environ['KPQC_'+r.upper()+'_INSTANCE_ID'] for r in ['server','client']}
     assert ids['server'] != ids['client']
@@ -91,9 +91,22 @@ def deploy(image):
             assert group in {s['GroupId'] for s in nodes[ids[role]]['SecurityGroups']}
             permission = [{'IpProtocol':'tcp','FromPort':22,'ToPort':22,
                            'IpRanges':[{'CidrIp':cidr,'Description':'kpqc-actions-'+os.environ.get('GITHUB_RUN_ID','local')}]}]
+            existing=aws('ec2','describe-security-groups','--group-ids',group)['SecurityGroups'][0]['IpPermissions']
+            if any(rule.get('IpProtocol')=='tcp' and rule.get('FromPort')==22 and rule.get('ToPort')==22
+                   and any(ip.get('CidrIp')==cidr for ip in rule.get('IpRanges',[])) for rule in existing):
+                # Reuse a pre-existing rule without taking ownership or revoking it later.
+                state.setdefault('reused_ssh_groups',[]).append(group);save(state)
+                continue
             # Persist intended cleanup before mutation, including interrupted requests.
             state['rules'].append({'group':group,'permission':permission}); save(state)
-            aws('ec2','authorize-security-group-ingress','--group-id',group,'--ip-permissions',json.dumps(permission))
+            try:
+                aws('ec2','authorize-security-group-ingress','--group-id',group,'--ip-permissions',json.dumps(permission))
+            except subprocess.CalledProcessError as e:
+                if b'InvalidPermission.Duplicate' in e.stderr:
+                    state['rules'].pop();save(state)
+                else:
+                    raise
+
         # 한 번 빌드하고 사전 시험한 이미지를 저장해 두 EC2에 그대로 전달한다. EC2에서 재빌드하지 않는다.
         archive = ROOT/'.aws-runtime/gate-image.tar'
         run(['docker','save','--output',str(archive),image])
@@ -117,10 +130,15 @@ def deploy(image):
         state['image_id'] = image_id
         state['image_identity_kind'] = 'sha256 of docker save image config (includes rootfs layer hashes)'
         save(state)
+        os.environ['KPQC_IMAGE_ID']=image_id
         # 실제 후보 승인·차단은 gate_suite.py가 수행한다. 제어는 SSH, TLS 접속은 사설 IP를 사용한다.
         subprocess.run(['python3','scripts/gate_suite.py','--server',nodes[ids['server']]['PublicIpAddress'],
                         '--client',nodes[ids['client']]['PublicIpAddress'], '--server-private',
                         nodes[ids['server']]['PrivateIpAddress'],'--image',image],check=True,cwd=ROOT)
+        if extended:
+            subprocess.run(['python3','scripts/extended_handshake.py','--server',nodes[ids['server']]['PublicIpAddress'],
+                            '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],
+                            '--image',image],check=True,cwd=ROOT)
     # 시험 성공뿐 아니라 중간 실패에도 정리한다. 강제 종료/API 장애 시에는 별도 정리 단계와 상태 확인이 필요하다.
     finally:
         cleanup()
@@ -129,5 +147,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--cleanup',action='store_true')
     parser.add_argument('--image',default='kpqc-lab:gate')
+    parser.add_argument('--extended',action='store_true')
     args = parser.parse_args()
-    cleanup() if args.cleanup else deploy(args.image)
+    cleanup() if args.cleanup else deploy(args.image,args.extended)

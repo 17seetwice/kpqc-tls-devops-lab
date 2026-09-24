@@ -1,0 +1,9 @@
+flowchart TB
+ CTRL["Local experiment controller"]
+ CLIENT["Client EC2 / TLS test client"]
+ SERVER["Server EC2 / Instrumented TLS"]
+ CTRL -.->|SSH| CLIENT
+ CTRL -.->|SSH| SERVER
+ CLIENT ==>|"Private IP / TLS 1.3"| SERVER
+ CLIENT --> OUT["Negotiation / latency / RSS"]
+ SERVER --> OUT

@@ -24,6 +24,8 @@ jobs:
       KPQC_CLIENT_SG_ID: ${{ secrets.KPQC_CLIENT_SG_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Verify fail-closed cryptographic policy
+        run: python3 scripts/test_gate_policy.py
       - name: Verify EC2 cleanup failure paths
         run: python3 scripts/test_ci_deploy.py
       # 여기서 locally는 내 PC가 아니라 GitHub runner 안의 Docker 시험을 의미한다.

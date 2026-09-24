@@ -33,7 +33,10 @@ def main(q):
         tag=q['tag'];assert tag.replace('-','').replace('_','').isalnum()
         output=OUT/tag;log=open(OUT/f'{tag}.stderr','wb')
         args=[BIN,'server',k,sigalg(s),str(STATE/f'{s}.crt'),str(STATE/f'{s}.key'),'0.0.0.0','4433',str(output),str(q['count']),'kpqc-lab.internal']
-        p=subprocess.Popen(args,stdout=log,stderr=log,start_new_session=True);log.close()
+        env=dict(os.environ)
+        if q.get('warm'):env['KPQC_WARM']='1'
+        if q.get('memory'):env['KPQC_MEMORY']='1'
+        p=subprocess.Popen(args,stdout=log,stderr=log,start_new_session=True,env=env);log.close()
         (STATE/'pending.json').write_text(json.dumps({'tag':tag,'pid':p.pid,'count':q['count']}))
         for _ in range(200):
             if Path(str(output)+'.ready').exists():return {'ready':True}
@@ -42,9 +45,19 @@ def main(q):
     # 반복마다 새로운 C 클라이언트 프로세스를 실행해 세션 재사용 없는 핸드셰이크를 측정한다.
     if action=='clients':
         k,s=q['kem'],q['signature'];tag=q['tag'];rows=[]
+        env=dict(os.environ)
+        if q.get('memory'):env['KPQC_MEMORY']='1'
+        if q.get('warm'):
+            env['KPQC_WARM']='1'
+            prefix=OUT/tag
+            p=subprocess.run([BIN,'client',k,sigalg(s),str(STATE/f'{s}.crt'),'-',q['ip'],'4433',str(prefix),str(q['count']),q.get('host','kpqc-lab.internal')],capture_output=True,timeout=120,env=env)
+            (OUT/f'{tag}.stderr').write_bytes(p.stderr)
+            for i in range(q['count']):
+                row=json.loads((OUT/f'{tag}-{i:03d}.json').read_text());row['returncode']=p.returncode;rows.append(row)
+            return {'rows':rows}
         for i in range(q['count']):
             path=OUT/f'{tag}-{i:03d}.json'
-            p=subprocess.run([BIN,'client',q.get('client_kem',k),sigalg(q.get('client_signature',s)),str(STATE/f'{q.get("trust_signature",s)}.crt'),'-',q['ip'],'4433',str(path),'1',q.get('host','kpqc-lab.internal')],capture_output=True,timeout=25)
+            p=subprocess.run([BIN,'client',q.get('client_kem',k),sigalg(q.get('client_signature',s)),str(STATE/f'{q.get("trust_signature",s)}.crt'),'-',q['ip'],'4433',str(path),'1',q.get('host','kpqc-lab.internal')],capture_output=True,timeout=25,env=env)
             (OUT/f'{tag}-{i:03d}.stderr').write_bytes(p.stderr)
             assert path.exists(),p.stderr.decode()
             row=json.loads(path.read_text());row['returncode']=p.returncode
@@ -66,6 +79,10 @@ def main(q):
             time.sleep(.01)
         else:raise RuntimeError('server still listening')
         (STATE/'pending.json').unlink();return {'rows':rows}
+    if action=='memory-selftest':
+        return json.loads(run([BIN,'memory-selftest']).stdout)
+    if action=='metadata':
+        return {'kernel':os.uname().release,'mtu':{p.parent.name:p.read_text().strip() for p in Path('/sys/class/net').glob('*/mtu')},'cpu_stat':Path('/proc/stat').read_text().splitlines()[0], 'cpuinfo':Path('/proc/cpuinfo').read_text().split('\n\n')[0],'environment':aws_worker.environment()}
     if action=='cleanup':
         p=STATE/'pending.json'
         if p.exists():

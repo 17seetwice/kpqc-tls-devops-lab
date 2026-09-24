@@ -1,0 +1,80 @@
+{
+  "passed": true,
+  "counts": {
+    "cold:total": 675,
+    "cold:analyzed": 645,
+    "warm:total": 1125,
+    "warm:analyzed": 645,
+    "memory:total": 135,
+    "memory:analyzed": 129
+  },
+  "sentinels": [
+    {
+      "mode": "cold",
+      "round": 0,
+      "before_ms": 1.314312,
+      "after_ms": 1.376874
+    },
+    {
+      "mode": "cold",
+      "round": 1,
+      "before_ms": 1.369077,
+      "after_ms": 1.308996
+    },
+    {
+      "mode": "cold",
+      "round": 2,
+      "before_ms": 1.401649,
+      "after_ms": 1.463716
+    },
+    {
+      "mode": "cold",
+      "round": 3,
+      "before_ms": 1.360669,
+      "after_ms": 1.377724
+    },
+    {
+      "mode": "cold",
+      "round": 4,
+      "before_ms": 1.41862,
+      "after_ms": 1.408617
+    },
+    {
+      "mode": "warm",
+      "round": 0,
+      "before_ms": 0.519395,
+      "after_ms": 0.529119
+    },
+    {
+      "mode": "warm",
+      "round": 1,
+      "before_ms": 0.565394,
+      "after_ms": 0.548596
+    },
+    {
+      "mode": "warm",
+      "round": 2,
+      "before_ms": 0.515334,
+      "after_ms": 0.520724
+    },
+    {
+      "mode": "warm",
+      "round": 3,
+      "before_ms": 0.519865,
+      "after_ms": 0.553533
+    },
+    {
+      "mode": "warm",
+      "round": 4,
+      "before_ms": 0.532152,
+      "after_ms": 0.542825
+    }
+  ],
+  "checks": [
+    "source hashes match",
+    "directional handshake bytes match",
+    "group names present",
+    "certificate fingerprints present",
+    "RSS reset and delta consistency"
+  ]
+}

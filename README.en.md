@@ -2,82 +2,84 @@
 
 [한국어](README.md) | **English**
 
-**A proof of concept that checks actual TLS connections before activating a new release and blocks candidates that violate the approved PQC configuration.**
+**Measure KPQC TLS handshake costs and promote a candidate service only when observed TLS behavior satisfies approved cryptographic policy.**
 
-The lab uses [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3), an OpenSSL image integrating Korean post-quantum cryptographic algorithms.
-It simulates container, certificate, and configuration changes that introduce unapproved algorithms or prevent the provider from loading.
+The project uses the author's [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3) OpenSSL integration: SMAUG and NTRU+ KEMs, with HAETAE and AIMer signatures.
 
-## How it works
+## Deployment gate
 
-![KPQC deployment validation architecture](docs/architecture/en/fig1-architecture.png)
+![Policy-based deployment gate](docs/architecture/en/fig1-architecture.png)
 
-GitHub Actions builds and tests the image, then deploys it to two AWS EC2 instances over SSH.
-The client connects to the candidate service over private IP. The server-side deployment gate compares the negotiated TLS parameters and certificate verification results against the policy.
+The **active** service handles current traffic. A **candidate** is a new version awaiting validation. Clients probe the router's candidate route; the gate checks negotiated parameters, certificate verification, prohibited-client rejection and evidence binding. Approval switches the active route to the candidate; rejection preserves the existing service.
 
-- **Active:** The existing service handling connections.
-- **Candidate:** A new version awaiting validation. Approval makes it active; rejection removes it and preserves the existing service.
+The active service already uses PQC. The experiment detects cryptographic configuration regression during updates. **Successful TLS connectivity does not imply deployment approval.** Provider availability is not a cryptographic policy requirement.
 
-The existing active service already uses PQC. This deployment experiment focuses on **preventing cryptographic configuration regressions during updates**.
-A successful TLS handshake does not authorize deployment if the negotiated algorithms violate the policy.
+The current [policy](policies/pqc-required.json) requires TLS 1.3, SMAUG1, HAETAE2 and TLS_AES_256_GCM_SHA384. KEM and signature identifiers are checked separately from the cipher suite.
 
-[Deployment workflow](docs/architecture/en/fig2-deployment-flow.png) · [Korean architecture](docs/architecture/ko/fig1-architecture.png) · [Korean workflow](docs/architecture/ko/fig2-deployment-flow.png)
+| Scenario | Expected behavior |
+|---|---|
+| Approved PQC configuration | Approve and promote |
+| Wrong KEM or signature | Reject |
+| Mixed PQC/classical configuration | Reject if a classical-only probe succeeds, even when PQC works |
+| TLS 1.2 | Reject; probe capability checked using a positive control |
+| Candidate/certificate/image/policy mismatch or stale evidence | Reject |
+| Probe timeout or malformed output | Reject |
 
-## Deployment policy and tests
+Final local and AWS gate runs each passed **63/63 assertions**. Active-route monitoring observed 69 samples with zero failures. Expected rejection counts as a successful test. [Final AWS evidence](after%20claude/data/gate.public.json)
 
-The current [policy](policies/pqc-required.json) requires **TLS 1.3 · SMAUG1 · HAETAE2 · TLS_AES_256_GCM_SHA384**.
-Certificate verification and connections from the required PQC client must succeed. Classical fallback is not allowed.
+## TLS handshake measurements
 
-| Candidate configuration | Expected behavior |
-| --- | --- |
-| SMAUG1 + HAETAE2 | Approve and switch the active route |
-| X25519 + HAETAE2 | Reject: key exchange policy mismatch |
-| SMAUG1 + ECDSA | Reject: signature policy mismatch |
-| Provider loading failure | Reject |
+Two m7i.large EC2 instances in the same Seoul AZ communicate over private IPv4, Docker host networking and MTU 9001. The matrix contains 7 KEM parameter sets × 6 signatures plus one classical baseline: 43 configurations.
 
-Candidates are evaluated independently. After promotion, five connections trusting only the new certificate verify the cutover.
-Test evidence records negotiated parameters, verification results, and approval or rejection reasons.
+| Metric | X25519 + ECDSA | Range of PQC configuration medians |
+|---|---:|---:|
+| Fresh-process handshake | 1.388 ms | 3.503–11.287 ms |
+| Reused-process handshake | 0.538 ms | 2.403–10.529 ms |
+| Client peak RSS growth | 460 KiB | 648–980 KiB |
+| Server peak RSS growth | 420 KiB | 628–1,252 KiB |
 
-## CI/CD and recorded results
+Latency covers the client SSL_connect call only: five rounds with three analyzed connections each. Reused processes still perform full handshakes without session resumption. Memory is measured separately using three fresh-process runs, reporting handshake-window peak RSS growth.
+
+![Baseline and SMAUG handshake latency](after%20claude/figures/en/latency_smaug.png)
+
+Points show medians of 15 connections. [English captions](after%20claude/captions.en.md) cover all figures. Detailed [environment](after%20claude/01_environment.md), [methods](after%20claude/02_methods.md) and [results](after%20claude/03_results.md) are currently in Korean; figures are available in both languages.
+
+## CI/CD and provenance
+
+![Deployment workflow](docs/architecture/en/fig2-deployment-flow.png)
 
 | Workflow | Trigger | Purpose |
-| --- | --- | --- |
-| [CI](.github/workflows/experiment.yml) | Push / pull request | Docker-based file signing, transfer, and deployment gate tests |
-| [AWS deployment validation](.github/workflows/aws-deploy.yml) | Manual dispatch on main | Build and test → OIDC authentication → EC2 deployment → candidate validation and promotion → evidence and cleanup |
+|---|---|---|
+| [CI](.github/workflows/experiment.yml) | Push / PR | Policy and cleanup tests, Docker file experiment and gate integration tests |
+| [AWS deployment gates](.github/workflows/aws-deploy.yml) | Manual on main | Build/test → OIDC → SSH deployment → gate → evidence and cleanup |
 
-OIDC provides AWS credentials; SSH executes commands on EC2. Successful CI does not automatically trigger AWS deployment.
+OIDC supplies temporary AWS credentials; SSH executes EC2 commands. Pushing does not start EC2 instances.
 
-The [recorded AWS run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618) passed **32 assertions in each of the local and AWS tests**.
-The AWS active route had zero failures across 86 sampled connections. EC2 instances were stopped and temporary SSH ingress rules were removed afterward.
-Correctly rejecting an invalid candidate counts as a successful test.
-The [preserved JSON evidence](evidence/github-aws-35961683618.json) corresponds to commit `55795e7`.
+**The latest 63-assertion gate and the performance measurements above were run on AWS by a local controller.** The earlier [GitHub Actions run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618) covers the previous 32-assertion suite. Check Actions for the new CI status of this published revision.
 
-## Run the lab and explore the code
+## Run and inspect
 
-Docker and Docker Compose are required. The base image targets `linux/amd64` and is pinned by digest.
+Docker, Compose and an amd64 execution environment are required. The base image is digest-pinned.
 
 ```sh
-# Test candidate approval, rejection, and active route switching
+python3 scripts/test_gate_policy.py
+python3 scripts/test_ci_deploy.py
 docker compose -f compose.gate.yaml run --build --rm gate
-
-# Test file signing and TLS transfer using synthetic financial XML
-docker compose run --build --rm lab
 ```
 
-Results are written to `artifacts/`. For AWS execution, see the [setup guide](docs/aws-setup.en.md).
+| Source | Responsibility |
+|---|---|
+| [gate_policy.py](scripts/gate_policy.py) | Evaluate observed TLS behavior |
+| [gate_suite.py](scripts/gate_suite.py), [gate_worker.py](scripts/gate_worker.py) | Candidate probes, rejection and promotion |
+| [tls_handshake.c](scripts/tls_handshake.c) | SSL-call latency, CPU, RSS and negotiation records |
+| [extended_handshake.py](scripts/extended_handshake.py) | Randomized configuration order and repeated measurements |
+| [ci_deploy.py](scripts/ci_deploy.py) | EC2 lifecycle, image identity and cleanup |
+| [figures.py](after%20claude/scripts/figures.py) | Recompute summaries and render bilingual figures |
 
-| File | Responsibility |
-| --- | --- |
-| [gate_suite.py](scripts/gate_suite.py) | Candidate scenarios and expected-result assertions |
-| [gate_worker.py](scripts/gate_worker.py) | TLS probes, policy evaluation, and route switching |
-| [ci_deploy.py](scripts/ci_deploy.py) | EC2 lifecycle, image delivery, and cleanup |
-| [tls_handshake.c](scripts/tls_handshake.c) | Handshake measurement and negotiated parameter collection |
-| [lab.py](scripts/lab.py) | Synthetic file signing and transfer experiments |
+See the [AWS setup guide](docs/aws-setup.en.md). The earlier synthetic XML signing/transfer experiment runs with `docker compose run --build --rm lab`; its timing is separate from handshake latency.
 
-## Scope
+## Scope and next steps
 
-The broader cryptographic experiments cover SMAUG-T and NTRU+ KEMs, and HAETAE and AIMer signatures. The deployment gate validates the representative SMAUG1 + HAETAE2 combination.
-Synthetic data uses a public camt.053 XSD; it does not reproduce an actual bank's settlement operations.
+Measurements use one EC2 pair, sequential connections and directly trusted server leaf certificates. Custom identifiers do not demonstrate interoperability with other TLS implementations. Configurations span different security parameters. The experiments do not establish production availability, concurrent capacity or an equal-security algorithm ranking. Evidence binding assumes a trusted controller.
 
-The AWS setup is a temporary PoC that stops EC2 instances after each experiment; EBS volumes remain.
-The TCP router uses a lab-specific route selector. Successful sampled connections do not establish a production zero-downtime SLA.
-Private keys, login files, and customer transaction data are excluded from the public repository.
+Current latency modes ran in cold-then-warm order. [Planned extensions](after%20claude/05_future_experiments.md) include randomized mode order, repeated executions, network conditions, concurrency and deployment under load. Planned work is not reported as completed. EC2 instances are stopped after experiments; EBS volumes remain. Private keys, AWS runtime configuration and customer data are excluded.

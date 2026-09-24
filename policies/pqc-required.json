@@ -1,5 +1,5 @@
 {
-  "version": "pqc-required-v1",
+  "version": "pqc-required-v3",
   "tls_version": "TLSv1.3",
   "kem": "smaug1",
   "group_code": 65056,
@@ -8,5 +8,14 @@
   "cipher": "TLS_AES_256_GCM_SHA384",
   "require_certificate_verification": true,
   "allow_classical_fallback": false,
-  "required_clients": ["pqc"]
+  "required_clients": [
+    "broad",
+    "pqc"
+  ],
+  "forbidden_clients": [
+    "classical_kem",
+    "classical_signature",
+    "legacy",
+    "tls12"
+  ]
 }
