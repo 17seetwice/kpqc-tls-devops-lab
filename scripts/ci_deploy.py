@@ -91,19 +91,14 @@ def deploy(image, extended=False):
             assert group in {s['GroupId'] for s in nodes[ids[role]]['SecurityGroups']}
             permission = [{'IpProtocol':'tcp','FromPort':22,'ToPort':22,
                            'IpRanges':[{'CidrIp':cidr,'Description':'kpqc-actions-'+os.environ.get('GITHUB_RUN_ID','local')}]}]
-            existing=aws('ec2','describe-security-groups','--group-ids',group)['SecurityGroups'][0]['IpPermissions']
-            if any(rule.get('IpProtocol')=='tcp' and rule.get('FromPort')==22 and rule.get('ToPort')==22
-                   and any(ip.get('CidrIp')==cidr for ip in rule.get('IpRanges',[])) for rule in existing):
-                # Reuse a pre-existing rule without taking ownership or revoking it later.
-                state.setdefault('reused_ssh_groups',[]).append(group);save(state)
-                continue
             # Persist intended cleanup before mutation, including interrupted requests.
             state['rules'].append({'group':group,'permission':permission}); save(state)
             try:
                 aws('ec2','authorize-security-group-ingress','--group-id',group,'--ip-permissions',json.dumps(permission))
             except subprocess.CalledProcessError as e:
                 if b'InvalidPermission.Duplicate' in e.stderr:
-                    state['rules'].pop();save(state)
+                    state['rules'].pop()
+                    state.setdefault('reused_ssh_groups',[]).append(group);save(state)
                 else:
                     raise
 
