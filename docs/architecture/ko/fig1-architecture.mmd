@@ -1,0 +1,19 @@
+flowchart TB
+    RUN["GitHub Actions<br/>빌드 · 시험 · 배포 제어"]
+        subgraph CLIENT["클라이언트 EC2"]
+            TLS["TLS 시험 클라이언트"]
+        end
+        subgraph SERVER["서버 EC2"]
+            GATE["정책 기반 배포 게이트"]
+            ROUTER["TCP 라우터"]
+            ACTIVE["활성 서비스"]
+            CAND["후보 서비스"]
+            GATE -.->|"경로 제어"| ROUTER
+            ROUTER -->|"active"| ACTIVE
+            ROUTER -->|"candidate"| CAND
+        end
+        TLS ==>|"사설 IP · TLS"| ROUTER
+    RUN -.->|"SSH"| TLS
+    RUN -.->|"SSH"| GATE
+    classDef gate fill:#e8f0f4,stroke:#334155,stroke-width:1.5px,color:#111827
+    class GATE gate

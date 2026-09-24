@@ -1,0 +1,12 @@
+flowchart TB
+    BUILD["Build · Test · OIDC"]
+    BUILD --> DEPLOY["Deploy candidate<br/>SSH"]
+    DEPLOY --> CHECK["TLS validation"]
+    CHECK --> GATE{"Policy satisfied"}
+    GATE -->|"Yes"| PROMOTE["Promote candidate"]
+    GATE -->|"No"| KEEP["Reject candidate<br/>Retain active service"]
+    PROMOTE --> VERIFY["Verify cutover"]
+    VERIFY --> END["Evidence and cleanup"]
+    KEEP --> END
+    classDef gate fill:#e8f0f4,stroke:#334155,stroke-width:1.5px,color:#111827
+    class GATE gate

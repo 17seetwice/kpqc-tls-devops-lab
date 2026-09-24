@@ -1,0 +1,5 @@
+Figure 1. Policy-based KPQC TLS deployment validation architecture. Dashed edges denote SSH and routing control; the thick edge denotes the TLS test connection between client and server. GitHub Actions collects test evidence and submits it to the server-side deployment gate. Both EC2 instances reside in the same availability zone in the Seoul region.
+
+Figure 2. Candidate deployment and validation workflow. The gate checks provider availability, TLS and certificate verification for required clients, and negotiated cryptographic parameters. Approved candidates replace the active route and are revalidated using the new certificate; rejected candidates leave the active service unchanged. Cleanup denotes experiment teardown.
+
+Experimental configuration: TLS 1.3, SMAUG1, HAETAE2, TLS_AES_256_GCM_SHA384. The active service and valid candidate use the same cryptographic configuration. Figure 2 depicts the decision flow for one candidate. CD is manually triggered and proceeds after a successful build and pre-deployment test.

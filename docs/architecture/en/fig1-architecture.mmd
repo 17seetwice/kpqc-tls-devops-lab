@@ -1,0 +1,19 @@
+flowchart TB
+    RUN["GitHub Actions<br/>Build · Test · Deployment"]
+        subgraph CLIENT["Client EC2"]
+            TLS["TLS test client"]
+        end
+        subgraph SERVER["Server EC2"]
+            GATE["Policy-based deployment gate"]
+            ROUTER["TCP router"]
+            ACTIVE["Active service"]
+            CAND["Candidate service"]
+            GATE -.->|"Route control"| ROUTER
+            ROUTER -->|"active"| ACTIVE
+            ROUTER -->|"candidate"| CAND
+        end
+        TLS ==>|"Private IP · TLS"| ROUTER
+    RUN -.->|"SSH"| TLS
+    RUN -.->|"SSH"| GATE
+    classDef gate fill:#e8f0f4,stroke:#334155,stroke-width:1.5px,color:#111827
+    class GATE gate
