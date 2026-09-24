@@ -47,8 +47,8 @@ jobs:
       # 여기서 locally는 내 PC가 아니라 GitHub runner 안의 Docker 시험을 의미한다.
       - name: Build candidate and verify locally
         run: |
-          docker build -f Dockerfile.gate -t kpqc-lab:gate .
           mkdir -p artifacts
+          docker build -f Dockerfile.gate -t kpqc-lab:gate .
           docker run --rm --network none --cpus 2 --memory 512m --tmpfs /state:size=64m -v "$PWD/artifacts:/results-root" --entrypoint python3 kpqc-lab:gate /app/scripts/gate_suite.py --local
       - name: Verify balanced latency collector locally
         if: inputs.balanced_latency
@@ -93,6 +93,7 @@ jobs:
       - name: Prepare public experiment evidence
         if: always()
         run: |
+          mkdir -p artifacts
           sudo chmod -R a+rX artifacts
           python3 scripts/ci_evidence.py
       - uses: actions/upload-artifact@v4
