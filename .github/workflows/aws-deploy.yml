@@ -21,6 +21,8 @@ jobs:
       KPQC_CLIENT_SG_ID: ${{ secrets.KPQC_CLIENT_SG_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Verify EC2 cleanup failure paths
+        run: python3 scripts/test_ci_deploy.py
       - name: Build candidate and verify locally
         run: |
           docker build -f Dockerfile.gate -t kpqc-lab:gate .
