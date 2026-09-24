@@ -133,7 +133,7 @@ def deploy(image, extended=False, systems=False):
         if systems:
             subprocess.run(['python3','scripts/systems_experiments.py','--server',nodes[ids['server']]['PublicIpAddress'],
                             '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],
-                            '--image',image],check=True,cwd=ROOT,timeout=1800)
+                            '--image',image,*(['--rollout-only'] if os.environ.get('KPQC_ROLLOUT_ONLY')=='1' else [])],check=True,cwd=ROOT,timeout=1800)
         if extended:
             subprocess.run(['python3','scripts/extended_handshake.py','--server',nodes[ids['server']]['PublicIpAddress'],
                             '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],

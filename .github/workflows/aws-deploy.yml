@@ -11,6 +11,10 @@ on:
         description: Run MTU, network delay, HRR, concurrent load and rollout experiments
         type: boolean
         default: false
+      rollout_only:
+        description: Retry only the deployment-under-load trial (requires systems_experiments)
+        type: boolean
+        default: false
 permissions:
   contents: read
 # 같은 EC2 두 대를 사용하는 배포 실행을 직렬화해 서로 충돌하지 않게 한다.
@@ -27,6 +31,7 @@ jobs:
       # GitHub OIDC 토큰으로 AWS 전용 역할의 단기 인증을 받는다. 영구 AWS 키를 사용하지 않는다.
       id-token: write
     env:
+      KPQC_ROLLOUT_ONLY: ${{ inputs.rollout_only && '1' || '0' }}
       KPQC_SYSTEMS: ${{ inputs.systems_experiments && '1' || '0' }}
       KPQC_BALANCED_LATENCY: ${{ inputs.balanced_latency && '1' || '0' }}
       KPQC_SERVER_INSTANCE_ID: ${{ secrets.KPQC_SERVER_INSTANCE_ID }}

@@ -43,9 +43,9 @@ for path in sorted((root/'artifacts').glob('*-extended-*/results.json')):
 summary['systems_experiments'] = []
 for path in sorted((root/'artifacts').glob('*-systems-*/results.json')):
     data=json.loads(path.read_text())
-    keys=['run_id','status','source_commit','image_identity','started_at','ended_at',
+    keys=['run_id','status','suite','source_commit','image_identity','started_at','ended_at',
           'measurement','network','hrr','throughput','rollout','rollout_load',
-          'rollout_certificate_sha256','assertions','pending_sessions']
+          'rollout_certificate_sha256','assertions','pending_sessions','post_promotion_progress','post_promotion_hold_seconds','endpoint_diagnostics']
     public={k:data[k] for k in keys if k in data}
     # Probe transport diagnostics may contain remote addresses; preserve numerical
     # TLS observations and verdicts, not raw transport error strings.

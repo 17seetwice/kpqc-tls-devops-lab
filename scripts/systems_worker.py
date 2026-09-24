@@ -9,6 +9,9 @@ def command(*args,check=True):
     p=subprocess.run(args,capture_output=True,text=True,timeout=20)
     if check and p.returncode:raise RuntimeError(' '.join(args)+': '+p.stderr)
     return {'code':p.returncode,'stdout':p.stdout,'stderr':p.stderr}
+def alive(pid):
+    try:return Path(f'/proc/{pid}/stat').read_text().split()[2]!='Z'
+    except FileNotFoundError:return False
 def cpu():
     return Path('/sys/fs/cgroup/cpu.stat').read_text()
 def main(q):
@@ -74,7 +77,8 @@ def main(q):
                 for line in f.read_text().splitlines():
                     try:rows.append(json.loads(line))
                     except ValueError:pass
-        return {'samples':len(rows),'fingerprints':sorted({r['peer_certificate_sha256'] for r in rows}),'done':(S/'load-done.json').exists()}
+        live=sum(alive(pid) for pid in state['pids'])
+        return {'samples':len(rows),'fingerprints':sorted({r['peer_certificate_sha256'] for r in rows}),'done':(S/'load-done.json').exists(),'live_workers':live}
     if a=='load-collect':
         state=json.loads((S/'load-state.json').read_text())
         if q.get('stop'):Path(state['stop']).touch()
@@ -86,7 +90,12 @@ def main(q):
         for i,pre in enumerate(state['prefixes']):
             for line in Path(pre+'.jsonl').read_text().splitlines():rows.append({'worker':i,**json.loads(line)})
             Path(pre+'.jsonl').unlink()
-        return {k:v for k,v in state.items() if k not in ('pids','prefixes','stop')}|{'rows':rows,'elapsed_seconds':(state['end_ns']-state['start_ns'])/1e9}
+        return {k:v for k,v in state.items() if k not in ('pids','prefixes','stop')}|{'rows':rows,'elapsed_seconds':(state['end_ns']-state['start_ns'])/1e9,'stderr_tails':[Path(pre+'.stderr').read_text()[-2000:] for pre in state['prefixes']]}
+    if a=='diagnostics':
+        return {'memory_events':Path('/sys/fs/cgroup/memory.events').read_text(),
+                'memory_peak':Path('/sys/fs/cgroup/memory.peak').read_text(),
+                'stderr_tails':{f.name:f.read_text()[-2000:] for f in O.glob('*.stderr') if f.stat().st_size},
+                'listeners':command('ss','-lnt')['stdout']}
     if a=='gate':
         os.environ['KPQC_SERVER_WORKERS']='8'
         return gw.main(q['request'])
