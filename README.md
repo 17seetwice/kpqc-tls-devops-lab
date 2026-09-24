@@ -38,7 +38,10 @@ AWS 실험은 종료 시 컨테이너를 정리하고 EC2를 중지한다. 지�
 ## 실행 기록
 
 - [GitHub CI 첫 성공 기록](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35959675727): 파일 전환 및 PQC 배포 게이트 시험 통과.
-- AWS 자동 배포: OIDC 초기 설정 대기 중. 이전 수동 AWS 시험과 GitHub 자동 배포의 완료 여부를 구분한다.
+- [GitHub → AWS 자동 배포 성공](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618): OIDC 인증, 동일 이미지 배포, 정상 후보 승격·오류 후보 차단, EC2 중지까지 통과.
+- 해당 실행에서 로컬·AWS 각각 32개 판정 통과. AWS 활성 경로 표본 감시 86회 중 실패 0회. [보존한 결과 JSON](evidence/github-aws-35961683618.json)
+- 검증 커밋: `55795e7afe40ca7c980de0209831dc16fee71dd3`. 잘못된 후보를 예상대로 차단한 시험은 성공으로 집계하며, 배포 승인과 구분한다.
+- 첫 AWS 실행은 Docker 이미지 ID 비교에서 차단되고 자동 정리됐다. 저장 방식에 독립적인 이미지 config SHA-256 비교로 수정한 후 위 실행이 성공했다.
 
 ## AWS 실행 전 설정
 
