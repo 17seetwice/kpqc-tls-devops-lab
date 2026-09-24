@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import time
 import urllib.request
+from image_digest import config_digest
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE = ROOT / '.aws-runtime/ci-state.json'
@@ -82,9 +83,11 @@ def deploy(image):
             # Persist intended cleanup before mutation, including interrupted requests.
             state['rules'].append({'group':group,'permission':permission}); save(state)
             aws('ec2','authorize-security-group-ingress','--group-id',group,'--ip-permissions',json.dumps(permission))
-        image_id = run(['docker','image','inspect',image,'--format','{{.Id}}']).decode().strip()
         archive = ROOT/'.aws-runtime/gate-image.tar'
         run(['docker','save','--output',str(archive),image])
+        with archive.open('rb') as stream:
+            image_id = config_digest(stream)
+        digest_code = (ROOT/'scripts/image_digest.py').read_text()
         for role in ids:
             host = nodes[ids[role]]['PublicIpAddress']
             for attempt in range(30):
@@ -96,9 +99,11 @@ def deploy(image):
                 raise RuntimeError('SSH not ready: '+role)
             with archive.open('rb') as stream:
                 ssh(host,role,'sudo docker load',stdin=stream,timeout=300)
-            remote_id = ssh(host,role,'sudo docker image inspect '+shlex.quote(image)+' --format '+shlex.quote('{{.Id}}')).decode().strip()
+            remote_id = ssh(host,role,'sudo docker save '+shlex.quote(image)+' | python3 -c '+shlex.quote(digest_code),timeout=300).decode().strip()
             assert image_id == remote_id, 'Image identity mismatch'
-        state['image_id'] = image_id; save(state)
+        state['image_id'] = image_id
+        state['image_identity_kind'] = 'sha256 of docker save image config (includes rootfs layer hashes)'
+        save(state)
         subprocess.run(['python3','scripts/gate_suite.py','--server',nodes[ids['server']]['PublicIpAddress'],
                         '--client',nodes[ids['client']]['PublicIpAddress'], '--server-private',
                         nodes[ids['server']]['PrivateIpAddress'],'--image',image],check=True,cwd=ROOT)

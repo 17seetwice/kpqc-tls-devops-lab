@@ -14,7 +14,7 @@ for path in sorted((root/'artifacts').glob('*/results.json')):
         continue
     data = json.loads(path.read_text())
     summary['file_experiments'].append({'run_id':path.parent.name,'status':data.get('status'),
-                                      'assertions':data.get('assertions',[])})
+                                      'assertions':data.get('tests',data.get('assertions',[]))})
 for path in sorted((root/'artifacts').glob('*gate-*/results.json')):
     data = json.loads(path.read_text())
     summary['runs'].append({
@@ -27,7 +27,7 @@ for path in sorted((root/'artifacts').glob('*gate-*/results.json')):
 state = root/'.aws-runtime/ci-state.json'
 if state.exists():
     data = json.loads(state.read_text())
-    summary['deployment'] = {k:data.get(k) for k in ['commit','run_url','image_id','cleanup_complete','cleanup_errors']}
+    summary['deployment'] = {k:data.get(k) for k in ['commit','run_url','image_id','image_identity_kind','cleanup_complete','cleanup_errors']}
 (out/'summary.json').write_text(json.dumps(summary,indent=2))
 if os.environ.get('GITHUB_STEP_SUMMARY'):
     with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as stream:
