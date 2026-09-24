@@ -1,8 +1,11 @@
+# 사용자가 KPQC를 포팅한 이미지를 digest로 고정해 기반 이미지의 변경을 방지한다.
 FROM dmfive/kpqc-ossl3@sha256:3a833a303e49a4edb1faa4c8f2b55d224786568600c6b001ed1e6f8ab4a30d3d
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 libxml2-utils gcc libc6-dev && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY scripts /app/scripts
 COPY schemas /app/schemas
 COPY policies /app/policies
+# 기반 이미지의 OpenSSL 헤더·라이브러리로 연결해 커스텀 KPQC TLS를 사용하는 C 측정기를 만든다.
 RUN gcc -O2 -Wall -Wextra -I/opt/openssl-3.4.4/include /app/scripts/tls_handshake.c -L/opt/openssl-3.4.4/lib -Wl,-rpath,/opt/openssl-3.4.4/lib -lssl -lcrypto -o /app/tls_handshake
+# 작업자가 docker exec로 여러 명령을 받을 수 있도록 컨테이너를 유지한다. 서버는 작업자가 별도로 시작한다.
 ENTRYPOINT ["sleep", "infinity"]

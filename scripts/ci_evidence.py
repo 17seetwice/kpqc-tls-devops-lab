@@ -4,10 +4,12 @@ import json
 from pathlib import Path
 import os
 
+# GitHub 공개 artifact에 올릴 필드만 선택한다. 개인키·AWS 식별자·원문 SSH 설정은 포함하지 않는다.
 root = Path(__file__).resolve().parents[1]
 out = root/'public-evidence'
 out.mkdir(exist_ok=True)
 summary = {'commit':os.environ.get('GITHUB_SHA'), 'run_id':os.environ.get('GITHUB_RUN_ID'), 'runs':[]}
+# 파일 전환 실험의 판정 목록과 배포 게이트 결과를 별도로 보존한다.
 summary['file_experiments'] = []
 for path in sorted((root/'artifacts').glob('*/results.json')):
     if 'gate-' in path.parent.name:
@@ -24,6 +26,7 @@ for path in sorted((root/'artifacts').glob('*gate-*/results.json')):
                       'required_legacy_decision':s.get('required_legacy_decision')} for s in data['scenarios']],
         'promoted_version':data.get('promotion',{}).get('active',{}).get('version'),
     })
+# 이미지 식별자·커밋·정리 성공 여부를 남겨 어떤 코드와 이미지로 실행했는지 추적한다.
 state = root/'.aws-runtime/ci-state.json'
 if state.exists():
     data = json.loads(state.read_text())

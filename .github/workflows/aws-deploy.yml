@@ -1,8 +1,10 @@
 name: AWS PQC deployment gates
+# Actions 화면에서 수동 실행한다. push/PR마다 유료 EC2 실험을 시작하지 않는다.
 on:
   workflow_dispatch:
 permissions:
   contents: read
+# 같은 EC2 두 대를 사용하는 배포 실행을 직렬화해 서로 충돌하지 않게 한다.
 concurrency:
   group: kpqc-aws-lab
   cancel-in-progress: false
@@ -13,6 +15,7 @@ jobs:
     timeout-minutes: 35
     permissions:
       contents: read
+      # GitHub OIDC 토큰으로 AWS 전용 역할의 단기 인증을 받는다. 영구 AWS 키를 사용하지 않는다.
       id-token: write
     env:
       KPQC_SERVER_INSTANCE_ID: ${{ secrets.KPQC_SERVER_INSTANCE_ID }}
@@ -23,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify EC2 cleanup failure paths
         run: python3 scripts/test_ci_deploy.py
+      # 여기서 locally는 내 PC가 아니라 GitHub runner 안의 Docker 시험을 의미한다.
       - name: Build candidate and verify locally
         run: |
           docker build -f Dockerfile.gate -t kpqc-lab:gate .
@@ -34,6 +38,7 @@ jobs:
           role-to-assume: ${{ secrets.KPQC_AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
           role-session-name: kpqc-${{ github.run_id }}
+      # Secret과 검증된 서버 호스트 키를 준비한다. 키 내용을 로그에 출력하지 않는다.
       - name: Install SSH credentials and pinned host keys
         env:
           SSH_KEY: ${{ secrets.KPQC_SSH_KEY }}
@@ -43,11 +48,14 @@ jobs:
           mkdir -p .aws-runtime
           printf '%s\n' "$SSH_KEY" > kpqc-devops-lab.pem
           printf '%s\n' "$KNOWN_HOSTS" > .aws-runtime/known_hosts
+      # ci_deploy가 EC2와 이미지 전달을 관리하고 gate_suite가 실제 TLS 후보 판정·전환을 수행한다.
       - name: Deploy exact tested image and exercise approval and rejection
         run: python3 scripts/ci_deploy.py
+      # 앞 단계 실패에도 정리를 시도한다. 강제 종료나 AWS 장애 시 정리 결과를 따로 확인해야 한다.
       - name: Stop lab and revoke temporary runner ingress
         if: always()
         run: python3 scripts/ci_deploy.py --cleanup
+      # 공개 artifact에는 개인키·원문 제어 설정 대신 허용한 결과 필드만 저장한다.
       - name: Prepare public experiment evidence
         if: always()
         run: |

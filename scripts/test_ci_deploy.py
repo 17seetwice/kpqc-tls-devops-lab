@@ -8,6 +8,8 @@ from unittest.mock import patch
 import ci_deploy
 
 
+# AWS를 실제 호출하지 않는 모의 시험이다. 기존 작업 보호와 부분 실패 후 정리가 동작하는지 확인한다.
+# 실제 TLS/PQC 기능 검증은 gate_suite.py의 통합 시험이 담당한다.
 class LifecycleTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

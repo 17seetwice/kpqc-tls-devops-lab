@@ -32,6 +32,7 @@ GROUPS = {"X25519": 0, "smaug1": 1, "smaug3": 3, "smaug5": 5,
 BASE_DIGEST = "sha256:3a833a303e49a4edb1faa4c8f2b55d224786568600c6b001ed1e6f8ab4a30d3d"
 
 
+# 이미지 안의 라이브러리 메타데이터를 읽어 지원 알고리즘과 구현이 주장하는 보안 카테고리를 기록한다.
 def library_metadata():
     # Read the stable prefix of OQS_KEM/OQS_SIG; record implementation claims,
     # never interpret them as independent security certification.
@@ -69,6 +70,7 @@ def run(args, *, data=None, check=True, cwd=None, resource_path=None):
     return p
 
 
+# OpenSSL 명령에 default와 oqsprovider를 함께 지정하는 공통 호출 경로다.
 def ssl(command, *args, **kwargs):
     return run(["openssl", command, "-provider", "default", "-provider", "oqsprovider", *args], **kwargs)
 
@@ -84,6 +86,7 @@ def measured_command(args, path):
     return ["/usr/bin/time", "-f", "%U %S %M", "-o", str(path), *map(str, args)]
 
 
+# 단계별 프로세스 자원을 읽는다. 최대 RSS는 프로세스 수명 전체의 최대값이며 단계별 최대값을 합산하지 않는다.
 def process_resources(path):
     # GNU time prints CPU seconds with two decimal places; retain this limit.
     user, system, rss = path.read_text().strip().splitlines()[-1].split()
@@ -93,6 +96,7 @@ def process_resources(path):
             "max_rss_kib": int(rss), "cpu_display_resolution_ms": 10}
 
 
+# 공개 camt.053 XSD에 맞춘 합성 거래 데이터를 만든다. 실제 고객 데이터나 은행 정산 업무의 완전한 재현은 아니다.
 def statement():
     ET.register_namespace("", NS)
     def add(parent, name, value=None, **attrs):
@@ -137,6 +141,7 @@ class Rejected(Exception):
     pass
 
 
+# 스키마 형식 검사와 실험용 잔액 일관성 검사를 구분한다. 형식 통과만으로 실제 금융 업무 적합성을 주장하지 않는다.
 def validate_xml(data, work, resource_path=None):
     if b"<!DOCTYPE" in data or b"<!ENTITY" in data:
         raise Rejected("xml_entities")
@@ -180,6 +185,7 @@ def validate_xml(data, work, resource_path=None):
             "opening": str(balances["OPBD"]), "closing": str(balances["CLBD"])}
 
 
+# 로컬 카나리 실험용 TCP 중계기다. 신규 접속 일부를 PQC 서버로 보내고 장애·차단 정책을 시험한다.
 class Router:
     """Deterministic 10-connection scheduling, TLS passthrough; no silent failover."""
     def __init__(self, legacy, pqc):
@@ -247,6 +253,7 @@ class Router:
             raise RuntimeError("router accept thread did not stop")
 
 
+# 초기 파일 서명·전송 실험의 본체다. execute()가 정상/변조/호환성/단계적 전환 시험을 순서대로 실행한다.
 class Lab:
     def __init__(self, work, out):
         self.work, self.out = work, out
@@ -268,6 +275,7 @@ class Lab:
         if not passed:
             raise AssertionError(name)
 
+    # 예상한 오류로 거부되어야 시험 성공이다. 변조 데이터가 정상 처리되면 오히려 시험 실패다.
     def reject(self, name, fn, expected):
         try:
             fn()
@@ -285,6 +293,7 @@ class Lab:
         ssl("pkey", "-in", private, "-pubout", "-out", public)
         self.trust[alg] = public
 
+    # 파일과 알고리즘·문서 ID 등 메타데이터를 함께 서명한다. base64는 JSON 운반용 인코딩이며 암호화가 아니다.
     def sign(self, alg, xml, document_id="LAB-STMT-20260923-001", resource_path=None):
         message = json.dumps({"domain": "KPQC-LAB-STATEMENT-v1", "algorithm": alg,
                               "key_id": alg, "policy_version": 1, "document_id": document_id,
@@ -299,6 +308,7 @@ class Lab:
         sig = (self.work / "signature.bin").read_bytes()
         return {"message_b64": base64.b64encode(message).decode(), "signature_b64": base64.b64encode(sig).decode()}, elapsed, len(sig)
 
+    # 허용 알고리즘·신뢰 공개키 → 서명 → XML/문서 ID → 선택적 중복 검사 순으로 검증한다.
     def receive(self, bundle, allowed, replay=False, trust=None, resource_paths=None):
         resource_paths = resource_paths or {}
         message = base64.b64decode(bundle["message_b64"], validate=True)
@@ -328,6 +338,7 @@ class Lab:
             self.seen.add(m["document_id"])
         return validated
 
+    # 이 초기 실험은 TLS 인증서를 EC로 고정하고 PQC 파일 서명과 KEM 전환을 관찰한다.
     def cert(self):
         ssl("req", "-x509", "-newkey", "ec", "-pkeyopt", "ec_paramgen_curve:P-256", "-nodes",
             "-keyout", self.keys / "tls.pem", "-out", self.work / "tls.crt", "-days", "1",
@@ -362,6 +373,7 @@ class Lab:
                 time.sleep(.02)
         raise RuntimeError("server readiness timeout")
 
+    # OpenSSL 프로세스 시작부터 TLS+HTTP 응답까지 포함한다. 순수 TLS 측정은 tls_handshake.c를 본다.
     def request(self, port, groups, *, host="localhost", ca=None, label="request"):
         seq = len(self.requests)
         trace = self.logs / f"tls-{seq:04}.trace"
@@ -480,6 +492,7 @@ class Lab:
             "scope": "one fresh file signature, single-connection TLS server/client, signature verification and XML validation per session; process initialization included; key/certificate generation excluded",
             "cpu": "sum of five measured child-process CPU times; Python controller and GNU time overhead excluded; each user/system field displayed at 10 ms resolution",
             "memory": "per-stage process lifetime maximum RSS in KiB; peaks are never summed; not incremental cryptographic memory"}
+        # 실행 순서에 따른 영향을 줄이도록 조합 순서를 고정 시드로 섞고, KEM×서명 조합별 자원을 따로 수집한다.
         rng = random.Random(20260923)
         for repeat in range(5):
             order = list(combined)
@@ -535,6 +548,7 @@ class Lab:
         rollout = []
         # Functional gate plus generous lab-only latency bound; not a bank SLO.
         threshold = max(2000, 3 * tls["X25519"]["client_process"]["p95_ms"])
+        # 단계별 20개 신규 연결에서 실제 협상 결과와 전달 성공을 확인한다. 운영 환경의 성능 SLO는 아니다.
         for pct in [10, 50, 100]:
             router.configure(pct)
             start_event = len(router.events)
@@ -559,6 +573,7 @@ class Lab:
         ok, _, _ = self.request(router.port, "smaug1:X25519", label="injected_server_failure")
         detected = time.perf_counter()
         self.record("server_failure_detected", not ok)
+        # 고전 KEM 복귀가 허용된 정책에서는 기존 경로로 복귀한다. 파일 서명까지 고전 방식으로 바꾸는 것은 아니다.
         router.configure(0)
         ok, downloaded, _ = self.request(router.port, "smaug1:X25519", label="allowed_rollback")
         if ok:
@@ -569,6 +584,7 @@ class Lab:
             "recovery_from_detection_ms": round((recovered-detected)*1000, 3),
             "failure_to_success_ms": round((recovered-failure_start)*1000, 3), "failed_probes": 1,
             "trigger": "next synthetic request, not continuous monitoring"}
+        # PQC 필수 정책에서는 고전 방식으로 조용히 우회하지 않고 연결을 차단하는 fail-closed를 검증한다.
         router.configure(100, blocked=True)
         before = len(router.events)
         ok, _, _ = self.request(router.port, "smaug1", label="pqc_required_fail_closed")
@@ -651,6 +667,7 @@ def main():
             raise
         finally:
             lab.close()
+            # 컨테이너 전체 누적 통계는 보조 관측이다. 알고리즘 조합별 비용은 sessions의 단계별 프로세스 결과를 사용한다.
             lab.result["container_resources"] = {}
             for name in ("cpu.max", "cpu.stat", "memory.max", "memory.peak"):
                 path = Path("/sys/fs/cgroup") / name

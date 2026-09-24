@@ -4,9 +4,12 @@ services:
       context: .
       dockerfile: Dockerfile.gate
     platform: linux/amd64
+    # 로컬 시험은 loopback만 사용한다. AWS의 사설 IP 통신 실험과 구분한다.
     network_mode: none
+    # CPU·메모리 한도는 실험 환경 설정이며 알고리즘이 실제 소비한 자원 측정값이 아니다.
     cpus: 2
     mem_limit: 512m
+    # 임시 TLS 개인키와 프로세스 상태는 메모리 파일시스템에 두고 컨테이너 제거 시 사라지게 한다.
     tmpfs:
       - /state:size=64m
     volumes:

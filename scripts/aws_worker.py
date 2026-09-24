@@ -12,6 +12,8 @@ import sys
 import time
 import lab
 
+# 초기 파일 전송 실험 작업자다. 여기의 signature는 파일 서명이며 TLS 인증서는 EC로 고정한다.
+# HAETAE/AIMer를 TLS 인증 서명에 쓰는 후속 실험은 handshake_worker.py와 gate_worker.py에 있다.
 STATE=Path('/state')
 OUT=Path('/results')
 HOST='kpqc-lab.internal'
@@ -22,6 +24,7 @@ def measured(args,path):
     return ['/app/measure',str(path),*map(str,args)]
 lab.measured_command=measured
 
+# CPU는 측정한 프로세스의 사용자+커널 시간을 합친다. 실제 경과 시간이나 CPU 사용률과 다르다.
 def resources(path):
     r=json.loads(path.read_text())
     r['total_cpu_ms']=round(r['user_cpu_ms']+r['system_cpu_ms'],3)
@@ -37,6 +40,7 @@ def instance():
     obj.seen=set()
     return obj
 
+# 환경 설정과 소스 해시를 기록한다. CPU·메모리 한도는 자원 사용량 측정 결과가 아니다.
 def environment():
     return {'platform':platform.platform(),'machine':platform.machine(),
        'openssl':lab.run(['openssl','version']).stdout.decode().strip(),
@@ -67,6 +71,7 @@ def main(q):
         for a in lab.ALGORITHMS:obj.trust[a].write_text(q['trust']['public_keys'][a])
         (STATE/'initialized').write_text('receiver')
         return {'environment':environment()}
+    # 선택한 알고리즘으로 파일을 서명하고 그 묶음을 단일 접속 TLS+HTTP 서버에서 제공한다.
     if action=='prepare':
         assert q['kem'] in CODES and q['signature'] in lab.ALGORITHMS
         assert not (STATE/'pending.json').exists(),'previous session not collected'
@@ -106,6 +111,7 @@ def main(q):
             raise RuntimeError('server did not finish')
         (STATE/'pending.json').unlink()
         return {'server':r}
+    # TLS로 묶음을 내려받은 후 파일 서명과 XML을 검증한다. client_process_ms는 순수 핸드셰이크 시간이 아니다.
     if action=='receive':
         sid=q['session_id']; assert sid.replace('-','').replace('_','').isalnum()
         trace=obj.logs/f'{sid}.trace'; rp=obj.logs/f'{sid}-client.json'

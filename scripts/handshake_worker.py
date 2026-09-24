@@ -4,6 +4,7 @@ import hashlib,json,os,signal,subprocess,sys,time
 from pathlib import Path
 import aws_worker
 
+# 순수 TLS 측정용 C 프로그램을 준비·호출·수집한다. HTTP 파일 전송 실험인 aws_worker와 구분한다.
 STATE=Path('/state'); OUT=Path('/results'); BIN='/app/tls_handshake'
 SIGS=['EC','haetae2','haetae3','haetae5','aimer128f','aimer192f','aimer256f']
 CODES=aws_worker.CODES
@@ -12,6 +13,7 @@ def sigalg(s):return 'ecdsa_secp256r1_sha256' if s=='EC' else s
 def main(q):
     STATE.mkdir(exist_ok=True);OUT.mkdir(exist_ok=True)
     action=q['action']
+    # 서명 알고리즘마다 TLS 서버 인증서와 개인키를 만든다. 키 생성 시간은 핸드셰이크 측정에서 제외한다.
     if action=='init-server':
         trust={}
         for s in SIGS:
@@ -25,6 +27,7 @@ def main(q):
         for s,pem in q['trust'].items():
             assert s in SIGS;(STATE/f'{s}.crt').write_text(pem)
         return {'environment':aws_worker.environment()}
+    # 이 프로파일의 KEM·TLS 인증 서명을 지정한다. count만큼 연결을 받되 서버는 연결마다 자식을 생성한다.
     if action=='start':
         k,s=q['kem'],q['signature'];assert k in CODES and s in SIGS
         tag=q['tag'];assert tag.replace('-','').replace('_','').isalnum()
@@ -36,6 +39,7 @@ def main(q):
             if Path(str(output)+'.ready').exists():return {'ready':True}
             assert p.poll() is None,'server exited';time.sleep(.01)
         raise RuntimeError('server readiness timeout')
+    # 반복마다 새로운 C 클라이언트 프로세스를 실행해 세션 재사용 없는 핸드셰이크를 측정한다.
     if action=='clients':
         k,s=q['kem'],q['signature'];tag=q['tag'];rows=[]
         for i in range(q['count']):
@@ -46,6 +50,7 @@ def main(q):
             row=json.loads(path.read_text());row['returncode']=p.returncode
             rows.append(row)
         return {'rows':rows}
+    # 서버 측 결과까지 모으고 포트가 닫힐 때까지 기다린 뒤 다음 프로파일로 넘어간다.
     if action=='collect':
         pending=json.loads((STATE/'pending.json').read_text());assert pending['tag']==q['tag']
         paths=[OUT/f'{pending["tag"]}-{i:03d}.json' for i in range(pending['count'])]

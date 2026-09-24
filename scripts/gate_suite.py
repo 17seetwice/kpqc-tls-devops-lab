@@ -4,6 +4,8 @@ import argparse,json,os,subprocess,sys,time,shlex
 from datetime import datetime,timezone
 from pathlib import Path
 
+# 이 파일은 실험의 시나리오다: 기존 서비스 준비 → 오류 후보 3종 차단 → 정상 후보 승격 → 결과 수집.
+# --local은 같은 컨테이너의 loopback, AWS 모드는 SSH로 두 컨테이너의 작업자를 호출한다.
 ap=argparse.ArgumentParser();ap.add_argument('--local',action='store_true');ap.add_argument('--server');ap.add_argument('--client');ap.add_argument('--server-private',default=os.environ.get('KPQC_SERVER_PRIVATE'));ap.add_argument('--image',default='kpqc-lab:gate');args=ap.parse_args()
 RUN=datetime.now(timezone.utc).strftime(('local-gate-' if args.local else 'aws-gate-')+'%Y%m%dT%H%M%SZ')
 ROOT=Path(__file__).resolve().parents[1]
@@ -15,15 +17,18 @@ if args.local:
 else:
     assert args.server and args.client and args.server_private;IP=args.server_private
 HOSTS={'server':args.server,'client':args.client};ALIASES={role:os.environ.get('KPQC_'+role.upper()+'_HOST_ALIAS', 'kpqc-'+role) for role in HOSTS}
+# 제어 명령과 JSON 증적을 SSH로 주고받는다. TLS 성능 측정 구간에 이 SSH 왕복 시간은 포함하지 않는다.
 def cmd(role,command,data=None):
     ssh=['ssh','-i',str(ROOT/'kpqc-devops-lab.pem'),'-o','IdentitiesOnly=yes','-o','StrictHostKeyChecking=yes','-o','HostKeyAlias='+ALIASES[role],'-o',f'UserKnownHostsFile={ROOT}/.aws-runtime/known_hosts','-o','ControlMaster=auto','-o','ControlPersist=600','-o',f'ControlPath={ROOT}/.aws-runtime/gate-%h','-o','ConnectTimeout=10']
     p=subprocess.run([*ssh,'ubuntu@'+HOSTS[role],command],input=data,capture_output=True,timeout=180)
     if p.returncode:raise RuntimeError(role+': '+p.stderr.decode(errors='replace')[-3000:])
     return p.stdout
+# 로컬과 AWS가 동일한 gate_worker.main() 동작을 쓰도록 호출 방법만 분리한다.
 def worker(role,q):
     if args.local:return gate_worker.main(q)
     return json.loads(cmd(role,'sudo docker exec -i kpqc-gate python3 /app/scripts/gate_worker.py',json.dumps(q).encode()))
 result={'status':'running','run_id':RUN,'environment_kind':'local loopback' if args.local else 'AWS same-AZ private IPv4','scenarios':[],'probes':[],'assertions':[]}
+# 배포 승인 여부와 시험 성공 여부는 다르다. 잘못된 후보를 예상대로 차단하면 시험은 통과다.
 def verify(name,ok):
     result['assertions'].append({'name':name,'passed':bool(ok)})
     assert ok,name
@@ -36,15 +41,20 @@ try:
         for role in HOSTS:
             cmd(role,f'mkdir -p kpqc-devops-lab/results/{RUN} && sudo docker run -d --init --name kpqc-gate --network host --cpus 2 --memory 512m --tmpfs /state:rw,noexec,nosuid,size=64m -v "$HOME/kpqc-devops-lab/results/{RUN}:/results" {shlex.quote(args.image)}')
             started.append(role)
+    # 기존 활성 서비스와 후보별 인증서를 만든다. 클라이언트에는 신뢰할 공개 인증서만 전달한다.
     init=worker('server',{'action':'init-server'});recv=worker('client',{'action':'init-client','trust':init['trust']})
     result['policy']=init['policy'];result['certificate_sha256']=init['certificate_sha256'];result['server_environment']=init['environment'];result['client_environment']=recv['environment']
     verify('source_hashes_match',init['environment']['source_sha256']==recv['environment']['source_sha256'])
     verify('initial_active_pqc',probe(tag='initial-active')['policy_failure'] is None)
+    # 후보 시험과 동시에 활성 경로를 반복 접속한다. 표본 감시이며 모든 순간의 무중단을 증명하지 않는다.
     worker('client',{'action':'monitor-start','ip':IP});monitor=True
+    # expected는 해당 후보에서 기대하는 차단 사유다. None인 good-v2만 승격할 수 있다.
     for name,expected in [('wrong-kem','KEM_POLICY_MISMATCH'),('wrong-signature','SIGNATURE_POLICY_MISMATCH'),('missing-provider','PROVIDER_UNAVAILABLE'),('good-v2',None)]:
         before=worker('server',{'action':'state'});start=worker('server',{'action':'candidate','name':name})
         probes={}
         if start['ready']:
+            # broad는 고전/PQC 모두 제안, pqc는 승인한 PQC만 제안, legacy는 고전 방식만 제안한다.
+            # 넓게 허용한 연결이 성공해도 실제 협상 결과가 정책에 맞는지는 별도로 판정한다.
             for client in ['broad','pqc','legacy']:probes[client]=probe('candidate',client,'all',f'{name}-{client}')
         evidence={'ready':start['ready'],'startup_reason':start.get('reason'),'probes':probes,'required_clients':['pqc']}
         decision=worker('server',{'action':'decision',**evidence})
@@ -52,6 +62,7 @@ try:
         if expected:
             verify(name+'-reason',expected in decision['reasons'])
             if start['ready']:verify(name+'-broad-handshake-succeeded',probes['broad']['success'] and probes['broad']['verify_result']==0)
+        # 후보를 검사하는 것만으로 기존 서비스가 바뀌면 안 된다. 경로 상태와 실제 TLS 접속을 함께 확인한다.
         after=worker('server',{'action':'state'});verify(name+'-active-unchanged',before['active']==after['active'])
         active=probe(tag=name+'-active-check');verify(name+'-active-still-pqc',active['policy_failure'] is None)
         scenario={'candidate':name,'startup':start,'probes':probes,'decision':decision,'active_before':before['active'],'active_after_gate':after['active'],'active_probe':active}
@@ -62,11 +73,13 @@ try:
             verify(name+'-candidate-discarded',state['candidate'] is None and state['active']==before['active'])
         print(name,decision,flush=True)
         if name=='good-v2':
+            # 같은 정상 PQC 후보도 legacy 지원을 필수로 요구하는 정책에서는 차단되어야 한다.
             legacy_evidence={**evidence,'required_clients':['pqc','legacy']}
             legacy=worker('server',{'action':'decision',**legacy_evidence})
             verify('required-legacy-blocks-promotion',not legacy['deployment_allowed'] and 'REQUIRED_CLIENT_INCOMPATIBLE' in legacy['reasons'])
             verify('legacy-block-keeps-active',worker('server',{'action':'state'})['active']==before['active'])
             scenario['required_legacy_decision']=legacy
+            # 승인된 후보만 활성 경로로 전환한다. 이후 새 인증서만 신뢰하는 접속 5회로 전환을 확인한다.
             promoted=worker('server',{'action':'promote','candidate':name,'evidence':evidence})
             verify('approved-candidate-promoted',promoted['active']['version']=='good-v2')
             result['promotion']=promoted
@@ -78,6 +91,7 @@ try:
     result['status']='passed'
 except Exception as e:
     result['status']='failed';result['error']=repr(e);raise
+# 성공·실패 모두 증적을 기록하고 컨테이너를 정리한다. 이 시험은 지속 운영 배포가 아닌 일시적 PoC다.
 finally:
     if monitor:
         try:result['monitor']=worker('client',{'action':'monitor-stop'})

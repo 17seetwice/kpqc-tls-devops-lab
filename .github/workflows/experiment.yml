@@ -1,4 +1,5 @@
 name: KPQC migration experiment
+# 코드 변경을 GitHub runner에서 검증한다. 이 워크플로는 AWS EC2를 시작하지 않는다.
 on:
   push:
   pull_request:
@@ -13,16 +14,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify EC2 cleanup failure paths
         run: python3 scripts/test_ci_deploy.py
+      # 합성 금융 XML의 형식 기준인 공개 스키마가 기록한 원본 해시와 같은지 확인한다.
       - name: Verify published schema checksum
         run: python3 -c 'import hashlib,json,pathlib; p=pathlib.Path("schemas"); s=json.loads((p/"source.json").read_text()); assert hashlib.sha256((p/"camt.053.001.08.xsd").read_bytes()).hexdigest()==s["sha256"]'
       - name: Build lab
         run: docker compose build
+      # 파일 서명·TLS+HTTP 전송·로컬 카나리/복귀 시험이다. 순수 TLS 시간 측정과 구분한다.
       - name: Execute verification and rollout gates
         run: |
           mkdir -p artifacts
           docker compose run --rm lab
       - name: Build deployment gate lab
         run: docker compose -f compose.gate.yaml build
+      # 오류 후보를 예상대로 거절하면 시험 성공이다. 모든 후보의 배포 승인이라는 의미가 아니다.
       - name: Verify candidate approval and rejection
         run: docker compose -f compose.gate.yaml run --rm gate
       - name: Make container results readable by artifact uploader
