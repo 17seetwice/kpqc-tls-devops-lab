@@ -1,2 +1,2 @@
-Figure 1. Evidence-based candidate validation and active-route promotion. Candidate probes use the TCP router. Provider availability is not a policy condition.
+Figure 1. Evidence-based candidate validation and active-route promotion. Candidate probes use the TCP router.
 Figure 2. Reusable CI/CD workflow: build/test, OIDC credentials, SSH deployment, policy decision, evidence and cleanup. Latest locally controlled AWS measurements are documented separately.

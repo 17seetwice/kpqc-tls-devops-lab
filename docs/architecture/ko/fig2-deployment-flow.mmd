@@ -1,12 +1,10 @@
 flowchart TB
-    BUILD["빌드 · 시험 · OIDC"]
-    BUILD --> DEPLOY["후보 배포<br/>SSH"]
-    DEPLOY --> CHECK["TLS 검증"]
-    CHECK --> GATE{"정책 충족"}
-    GATE -->|"예"| PROMOTE["후보 승격"]
-    GATE -->|"아니오"| KEEP["후보 차단<br/>기존 서비스 유지"]
-    PROMOTE --> VERIFY["전환 확인"]
-    VERIFY --> END["증적 저장·정리"]
-    KEEP --> END
-    classDef gate fill:#e8f0f4,stroke:#334155,stroke-width:1.5px,color:#111827
-    class GATE gate
+ BUILD["이미지 빌드 및 시험"] --> AUTH["AWS 권한 취득 / OIDC"]
+ AUTH --> DEPLOY["후보 배포 / SSH"]
+ DEPLOY --> TEST["TLS 프로브 및 증적 검증"]
+ TEST --> GATE{"정책 충족"}
+ GATE -->|"통과"| PROMOTE["후보 승격"]
+ GATE -->|"거절"| KEEP["후보 거절 / 기존 서비스 유지"]
+ PROMOTE --> VERIFY["전환 확인"]
+ VERIFY --> END["증적 저장 및 자원 정리"]
+ KEEP --> END

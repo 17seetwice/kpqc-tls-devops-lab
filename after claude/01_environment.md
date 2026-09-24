@@ -4,19 +4,19 @@
 
 | 항목 | 설정 |
 |---|---|
-| 서버 / 클라이언트 | AWS EC2 m7i.large 각 1대 |
+| 서버 / 클라이언트 | AWS (Amazon Web Services) EC2 (Elastic Compute Cloud) m7i.large 각 1대 |
 | 위치 | 서울, ap-northeast-2a, 사설 IPv4 통신 |
-| 컨테이너 | Docker host network, CPU 2개 한도, 메모리 512 MiB 한도 |
-| 실제 네트워크 인터페이스 | enp39s0, MTU 9001 |
+| 컨테이너 | Docker host network, CPU (Central Processing Unit) 2개 한도, 메모리 512 MiB 한도 |
+| 실제 네트워크 인터페이스 | enp39s0, MTU (Maximum Transmission Unit) 9001 |
 | 암호 구현 | 사용자 제작 dmfive/kpqc-ossl3 기반 실험 이미지 |
-| TLS | TLS 1.3, TLS_AES_256_GCM_SHA384 |
+| TLS (Transport Layer Security) | TLS 1.3, TLS_AES_256_GCM_SHA384 |
 | 인증 | 자체 서명 서버 리프를 명시적으로 신뢰, 호스트 이름 검증 |
-| KEM | SMAUG 1/3/5, NTRU+ 576/768/864/1152 |
+| KEM (Key Encapsulation Mechanism) | SMAUG 1/3/5, NTRU+ 576/768/864/1152 |
 | 서명 | HAETAE 2/3/5, AIMer 128f/192f/256f |
-| 기준선 | X25519 + ECDSA |
-| 실행 제어 | 로컬 AWS CLI 및 SSH |
+| 기준선 | X25519 + ECDSA (Elliptic Curve Digital Signature Algorithm) |
+| 실행 제어 | 로컬 AWS CLI 및 SSH (Secure Shell) |
 
-컨테이너 한도는 실행 환경이며 측정된 사용량과 구분한다. 커스텀 TLS 식별자를 사용하는 동일 이미지 간 실험이다. 일반 브라우저나 외부 OpenSSL 구현과의 상호운용성은 평가하지 않았다. Provider 사용 여부는 이미지 구현 사항이며 배포 정책의 조건이 아니다.
+컨테이너 한도는 실행 환경이며 측정된 사용량과 구분한다. 커스텀 TLS 식별자를 사용하는 동일 이미지 간 실험이다. 일반 브라우저나 외부 OpenSSL 구현과의 상호운용성은 평가하지 않았다.
 
 ## Cold: 새 프로세스 조건
 
@@ -24,7 +24,7 @@
 
 ## Warm: 프로세스 재사용 조건
 
-한 구성의 반복 측정에서 프로그램과 OpenSSL 컨텍스트를 유지한다. 먼저 2회 연결하고, 이후 3회를 분석한다. 각 연결은 새 TCP 연결과 새 SSL 객체를 사용하며 매번 전체 핸드셰이크를 수행한다. 이전 통신의 세션 티켓으로 절차를 줄이는 **TLS 세션 재개와 다르다**.
+한 구성의 반복 측정에서 프로그램과 OpenSSL 컨텍스트를 유지한다. 먼저 2회 연결하고, 이후 3회를 분석한다. 각 연결은 새 TCP (Transmission Control Protocol) 연결과 새 SSL 객체를 사용하며 매번 전체 핸드셰이크를 수행한다. 이전 통신의 세션 티켓으로 절차를 줄이는 **TLS 세션 재개와 다르다**.
 
 두 조건의 차이에는 초기화·캐시·실행 시점 등의 영향이 섞일 수 있다. 이번 실행은 cold 다음 warm 순서이므로 차이 전체를 재사용의 인과 효과로 단정하지 않는다.
 
