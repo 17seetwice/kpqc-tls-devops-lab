@@ -1,0 +1,23 @@
+{
+  "run_id": "aws-extended-20260924T134811Z",
+  "source_commit": "cfd6bcc9a71e1fdbfb18b142c94a237bd4784c1a",
+  "image_identity": "sha256:06e41fe65fa8e303a5c9c8c993317ed32b45d9c81269d6a5dcdd32f4caf28b58",
+  "collected": 3600,
+  "analyzed": 2580,
+  "modes": {
+    "cold": {
+      "baseline_ms": 1.7239185,
+      "pqc_configuration_median_range_ms": [
+        3.8905865,
+        12.218445
+      ]
+    },
+    "warm": {
+      "baseline_ms": 0.8148265,
+      "pqc_configuration_median_range_ms": [
+        2.8523875,
+        11.5000885
+      ]
+    }
+  }
+}

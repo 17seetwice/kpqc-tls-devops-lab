@@ -1,0 +1,11 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':24,'rankSpacing':30}}}%%
+flowchart TB
+  C["배포 후보"] --> G{"실제 TLS 암호·인증서 검증"}
+  G -->|통과| P{"고정 도착률 성능 검사"}
+  G -->|거절| K["기존 서비스 유지"]
+  P -->|기준 미달| K
+  P -->|승인| A["활성 경로 전환<br/>기존 암호 → KPQC 첫 배포 → KPQC 갱신"]
+  A --> H["실제 접속·인증서 상태 관측"]
+  H -->|"연속 실패 2회"| R{"이전 승인 서비스의 TLS 정상 확인"}
+  R -->|통과| B["이전 승인 KPQC 서비스 복구<br/>접속·암호 정책 재검증"]
+  R -->|불충족| X["자동 복구 거절<br/>고전 암호 복귀 금지"]

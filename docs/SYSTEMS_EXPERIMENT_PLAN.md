@@ -40,3 +40,7 @@ Require certificate verification, TLS1.3, expected group/signature, no session r
 Reject a mixed KEM candidate that accepts a classical-only probe even when its broad probe negotiates PQC. Accept the approved candidate only after the actual gate validates positive and negative probes and candidate binding. Load must still be running during both decisions. Verify observed service certificate fingerprints; the rejected candidate must never appear on the active path.
 
 Run local Docker integration checks before starting EC2. Use a bounded AWS suite and a separate always-run cleanup step. Check the actual stopped state after the workflow. Publish new numerical results for review before replacing the repository's existing result tables.
+
+## Network-emulation boundary
+
+The endpoint egress placement is a controlled perturbation, not a validated WAN model. The [netem manual](https://man7.org/linux/man-pages/man8/tc-netem.8.html) recommends receiver-ingress placement for realistic TCP performance because TCP Small Queues can interact with sender-side emulation. This run reports endpoint-delay sensitivity and measured TCP RTT, and does not infer WAN throughput. The concurrent throughput trial uses zero injected delay. A separate receiver-ingress validation would be needed before making a realistic delayed-network capacity claim.

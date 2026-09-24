@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-09-24T17:25:37.049044+00:00",
+  "source": "GitHub Actions cleanup evidence: stop-instances followed by instance-stopped waiter for both lab nodes",
+  "workflow_run": "36032662708",
+  "cleanup_complete": true,
+  "independent_local_check": "passed",
+  "independent_checked_at": "2026-09-24T17:28:21.446844+00:00",
+  "instances": [
+    {
+      "State": "stopped",
+      "Type": "m7i.large",
+      "AvailabilityZone": "ap-northeast-2a"
+    },
+    {
+      "State": "stopped",
+      "Type": "m7i.large",
+      "AvailabilityZone": "ap-northeast-2a"
+    }
+  ]
+}

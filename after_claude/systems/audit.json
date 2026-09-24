@@ -1,0 +1,38 @@
+{
+  "run_id": "aws-systems-20260924T150755Z",
+  "source_commit": "fa1202cafff8b1683d1df7752ebc04365032583d",
+  "image_identity": "sha256:ad58b310c58e3f3d42a1c2ba2fda41836cf562e12a7fd0b94ce77c97f0e828d2",
+  "input_sha256": "f978e652e6e01cac41b9a40594b4e2562650ceb76e7883f5ad1acd4c249b80ce",
+  "workflow_status": "failed",
+  "performance_assertions": 654,
+  "network_connections": 450,
+  "network_analyzed": 270,
+  "hrr_connections": 360,
+  "hrr_analyzed": 216,
+  "throughput_connections": 273091,
+  "server_priming_connections": 720,
+  "performance_audit": "passed",
+  "initial_rollout": {
+    "status": "failed",
+    "recorded_connections": 26701,
+    "client_exit_codes": [
+      2,
+      2,
+      2,
+      2
+    ],
+    "failed_assertions": [
+      "rollout-both-approved-identities"
+    ]
+  },
+  "rollout_run_id": "aws-systems-20260924T161301Z",
+  "rollout_source_commit": "c9ebcfaf8dcfe50fa3a6e28f77e2ac20e1a95b96",
+  "rollout_image_identity": "sha256:f199728c9ed1851434dd76fe3cf58d1b309458fab0cf27f096049ab8311b7a47",
+  "rollout_assertions": 8,
+  "rollout_connections": 24504,
+  "rollout_old_connections": 3847,
+  "rollout_new_connections": 20657,
+  "rollout_failed": 0,
+  "rollout_elapsed_seconds": 73.760747107,
+  "rollout_audit": "passed"
+}

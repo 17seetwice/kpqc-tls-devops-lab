@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KPQC TLS 실험 보고서</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f8fa;color:#182b3a;
+font:16px/1.75 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{max-width:1120px;margin:32px auto;padding:32px;background:#fff}
+nav{display:flex;flex-wrap:wrap;gap:8px 20px;border-bottom:1px solid #dce3e8;padding-bottom:16px}
+a{color:#006da8;overflow-wrap:anywhere}h1{line-height:1.35}h2{margin-top:2em}
+img{max-width:100%;height:auto}table{border-collapse:collapse;display:block;overflow-x:auto;margin:20px 0}
+th,td{border:1px solid #dce3e8;padding:9px 12px}th{background:#edf3f7}
+pre{padding:16px;background:#f1f4f7;overflow:auto;line-height:1.5}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
+@media(max-width:640px){main{margin:0;padding:20px}h1{font-size:26px}}
+</style>
+</head>
+<body><main>
+<nav aria-label="Documents"><a href="gallery.html">그림 모음 / Gallery</a>
+<a href="README.html">보고서</a><a href="README.en.html">Report</a>
+<a href="METHODS.html">실험 방법</a><a href="METHODS.en.html">Methods</a>
+<a href="audit.html">Audit</a></nav>
+<h1>KPQC TLS: 네트워크 조건과 동시 부하 실험 결과</h1>
+<p><a href="README.en.html">English</a> · <a href="gallery.html">그림 모음</a> · <a href="METHODS.html">실험 방법</a></p>
+<p>MTU (Maximum Transmission Unit), 추가 네트워크 지연, HRR (HelloRetryRequest), 동시 접속과 부하 중 배포 전환을 기존 EC2 두 대에서 측정했다. 대표 암호 조합 5개를 사용했으며, 인증서 체인과 추가 메모리 측정은 이번 범위에서 제외했다.</p>
+<p><a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36016712344">성능 측정 실행</a> · 소스 <code>fa1202c</code> · 성능 검증 654항목 통과. <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36025021206">배포 부하 재시험</a> · 소스 <code>c9ebcfa</code>. 실행 후 <strong>두 EC2의 중지 상태를 AWS API로 별도 확인</strong>했다. 이번 결과는 사용자 검토용이며 저장소 루트의 기존 성능표를 대체하지 않았다.</p>
+<h2>1. MTU 및 네트워크 지연</h2>
+<p>AWS는 모든 EC2 인스턴스의 MTU1500 지원과 인터넷 게이트웨이 트래픽의 1500바이트 제한을 명시한다. 기존 MTU9001 환경에 MTU1500 대조군을 두는 것은 타당하다. 두 조건은 같은 Docker 브리지 구성에서 비교했다. <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network_mtu.html">AWS 공식 문서</a></p>
+<p>표는 세 블록 중앙값의 중앙값이며 단위는 ms다. 추가 왕복 지연은 양 끝 송신 지연의 합으로 설정한 값이다.</p>
+<table>
+<thead>
+<tr>
+<th>암호 조합</th>
+<th style="text-align: right;">추가 0 ms · MTU1500</th>
+<th style="text-align: right;">추가 0 ms · MTU9001</th>
+<th style="text-align: right;">추가 30 ms · MTU1500</th>
+<th style="text-align: right;">추가 30 ms · MTU9001</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X25519 + ECDSA P-256</td>
+<td style="text-align: right;">0.547</td>
+<td style="text-align: right;">0.539</td>
+<td style="text-align: right;">31.322</td>
+<td style="text-align: right;">31.271</td>
+</tr>
+<tr>
+<td>SMAUG1 + HAETAE2</td>
+<td style="text-align: right;">2.640</td>
+<td style="text-align: right;">2.531</td>
+<td style="text-align: right;">33.766</td>
+<td style="text-align: right;">33.609</td>
+</tr>
+<tr>
+<td>SMAUG1 + AIMer128f</td>
+<td style="text-align: right;">3.143</td>
+<td style="text-align: right;">3.159</td>
+<td style="text-align: right;">62.576</td>
+<td style="text-align: right;">34.128</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + HAETAE2</td>
+<td style="text-align: right;">3.350</td>
+<td style="text-align: right;">3.300</td>
+<td style="text-align: right;">33.906</td>
+<td style="text-align: right;">33.994</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + AIMer128f</td>
+<td style="text-align: right;">3.504</td>
+<td style="text-align: right;">3.427</td>
+<td style="text-align: right;">62.886</td>
+<td style="text-align: right;">34.350</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="MTU 및 지연 비교" src="ko/01-network.png" /></p>
+<p>각 조건의 관측 TCP RTT (Round-Trip Time)와 MSS (Maximum Segment Size)는 <a href="network_blocks.csv">블록별 CSV</a>에 함께 제공한다. 송신 측 지연 주입 결과이며 실제 인터넷 경로의 성능을 나타내지는 않는다.</p>
+<h2>2. HRR 추가 비용</h2>
+<p>HRR 유발 연결 180회에서 각각 HRR 1회, 대조 연결 180회에서 HRR 0회를 확인했다. 두 조건의 최종 KEM·서명 조합과 인증서 검증 성공을 확인했다. 분석에는 준비 연결을 제외한 총 216회를 사용했다.</p>
+<p>표는 같은 블록에서 계산한 <code>HRR 지연 − 대조군 지연</code>의 세 블록 중앙값이다. 단위는 ms다.</p>
+<table>
+<thead>
+<tr>
+<th>암호 조합</th>
+<th style="text-align: right;">추가 왕복 지연 0 ms</th>
+<th style="text-align: right;">추가 왕복 지연 10 ms</th>
+<th style="text-align: right;">추가 왕복 지연 30 ms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SMAUG1 + HAETAE2</td>
+<td style="text-align: right;">0.648</td>
+<td style="text-align: right;">11.550</td>
+<td style="text-align: right;">31.291</td>
+</tr>
+<tr>
+<td>SMAUG1 + AIMer128f</td>
+<td style="text-align: right;">0.358</td>
+<td style="text-align: right;">10.786</td>
+<td style="text-align: right;">30.858</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + HAETAE2</td>
+<td style="text-align: right;">0.367</td>
+<td style="text-align: right;">10.613</td>
+<td style="text-align: right;">30.873</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + AIMer128f</td>
+<td style="text-align: right;">0.383</td>
+<td style="text-align: right;">10.924</td>
+<td style="text-align: right;">30.934</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="HRR 비교" src="ko/02-hrr.png" /></p>
+<h2>3. 동시 접속 및 처리량</h2>
+<p>서버 작업자 8개, 클라이언트 프로세스 1·4·16개 조건에서 각각 8초 × 3회 측정했다. 총 273,091회 연결의 TLS 협상 및 인증서 검증을 확인했다. 표는 세 측정 구간의 처리량 중앙값이며 단위는 완료 핸드셰이크/초다.</p>
+<table>
+<thead>
+<tr>
+<th>암호 조합</th>
+<th style="text-align: right;">동시 1개</th>
+<th style="text-align: right;">동시 4개</th>
+<th style="text-align: right;">동시 16개</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X25519 + ECDSA P-256</td>
+<td style="text-align: right;">1,232.7</td>
+<td style="text-align: right;">2,430.3</td>
+<td style="text-align: right;">2,596.2</td>
+</tr>
+<tr>
+<td>SMAUG1 + HAETAE2</td>
+<td style="text-align: right;">288.9</td>
+<td style="text-align: right;">532.8</td>
+<td style="text-align: right;">571.5</td>
+</tr>
+<tr>
+<td>SMAUG1 + AIMer128f</td>
+<td style="text-align: right;">279.1</td>
+<td style="text-align: right;">471.5</td>
+<td style="text-align: right;">556.1</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + HAETAE2</td>
+<td style="text-align: right;">266.0</td>
+<td style="text-align: right;">484.0</td>
+<td style="text-align: right;">530.7</td>
+</tr>
+<tr>
+<td>NTRU+ KEM768 + AIMer128f</td>
+<td style="text-align: right;">260.5</td>
+<td style="text-align: right;">450.0</td>
+<td style="text-align: right;">521.3</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="동시 접속 결과" src="ko/03-concurrency.png" /></p>
+<p>처리량은 TCP 연결·종료·계측 기록 비용을 포함하는 <strong>계측용 서비스와 부하 생성기의 결과</strong>다. 서버의 절대 최대 용량으로 해석하지 않는다. 그래프는 SSL_connect 지연과 준비 대기를 포함한 접속 지연을 구분한다.</p>
+<h2>4. 부하 중 배포 전환</h2>
+<p>첫 전체 실행에서는 26,701개 접속 기록 후 부하 프로세스 4개가 종료 코드 2로 끝났고, 새 서비스 인증서를 확인하지 못했다. 이 시험은 실패로 보존했다. 해당 버전은 종료 오류 원문을 저장하지 않아 정확한 원인은 확정할 수 없다.</p>
+<p>후속 실행에서는 누적 전체 결과를 매번 다시 쓰던 제어 코드를 개선하고, 클라이언트 종료 오류·자원 진단·작업자 생존 여부를 기록했다. <strong>배포 항목만 별도로 재시험</strong>했으며, 새 인증서 관측 후 60초 동안 부하를 추가 유지했다. 아래 결과는 이 재시험에 한정된다.</p>
+<p>동시 클라이언트 4개가 73.76초 동안 24,504회 접속했다. 기존 서비스 인증서 3,847회, 승인된 새 서비스 인증서 20,657회를 관측했으며 TLS 실패는 0회였다.</p>
+<ul>
+<li>고전 KEM도 허용하는 혼합 후보: 부정 프로브에 의해 거절, 기존 활성 경로 유지.</li>
+<li>승인된 정상 후보: 정책과 후보 증적 확인 후 활성 경로로 전환.</li>
+<li>활성 경로에서는 거절된 후보의 인증서가 관측되지 않음.</li>
+</ul>
+<p><img alt="배포 중 접속 기록" src="ko/04-rollout.png" /></p>
+<p>전환 후 유휴 상태가 된 이전 서비스 작업자에서 <code>accept</code> 시간 초과 종료가 기록됐다. 이번 시험은 새 서비스로의 전환을 검증하며, 이전 작업자의 지속 가용성이나 즉시 롤백을 검증하지 않는다. 한 번의 제한된 부하 전환 결과이며 운영 환경의 무중단 보장을 의미하지 않는다.</p>
+<h2>자료와 재현</h2>
+<p>네트워크 지연 분석 270회, HRR 분석 216회는 각각 준비 연결을 제외한 값이다. 처리량 시험 준비 연결 720회는 처리량 계산에서 제외했다. 각 실험의 원기록을 구분해 보존했다.</p>
+<ul>
+<li><a href="METHODS.html">한국어 실험 방법</a> · <a href="METHODS.en.html">English methods</a></li>
+<li><a href="throughput_blocks.csv">처리량 블록별 CSV</a> · <a href="hrr_blocks.csv">HRR 블록별 CSV</a> · <a href="paired_contrasts.csv">블록 내 차이</a></li>
+<li><a href="audit.html">검증 요약</a> · <a href="workflow.public.json">첫 워크플로 증적</a> · <a href="rollout-workflow.public.json">재시험 증적</a> · <a href="cleanup-verification.json">중지 확인</a></li>
+<li><a href="measurements.public.json.gz">성능 및 최초 실패 원기록</a> · <a href="rollout.public.json.gz">배포 재시험 원기록</a> · <a href="REVIEW_LOG.md">검토 기록</a></li>
+</ul>
+<p>저장소 루트에서 실행:</p>
+<pre><code class="language-sh">.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
+.venv/bin/python 'after_claude/scripts/report_systems.py'
+</code></pre>
+<p>세 블록은 동일 인스턴스 쌍의 한 실행에 속한다. 기존 호스트 네트워크 결과와 직접 합산하지 않으며, 이번 대표 파라미터 밖의 조합과 실서비스의 처리 용량으로 일반화하지 않는다.</p>
+<footer><a href="README.md" download>원본 다운로드 / Download source</a></footer>
+</main></body></html>

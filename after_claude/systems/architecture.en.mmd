@@ -1,0 +1,11 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','clusterBkg':'#FFFFFF','clusterBorder':'#AAB8C2','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':30,'rankSpacing':35}}}%%
+flowchart TB
+  G["GitHub Actions<br/>Build · preflight · run · cleanup"]
+  subgraph E["Existing EC2 pair · same Availability Zone · 2 vCPU limit each"]
+    direction LR
+    C["Client<br/>1 / 4 / 16 TLS client processes<br/>Container MTU and egress-delay control"]
+    S["Server<br/>TLS benchmark / deployment-trial router<br/>Container MTU and egress-delay control"]
+    C <-->|"Private IPv4 · TCP 4433"| S
+  end
+  G -.->|"SSH control"| E
+  E --> A["Evidence audit · results and figures<br/>Verify stopped EC2 instances after execution"]

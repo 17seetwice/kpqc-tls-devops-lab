@@ -1,6 +1,12 @@
 # KPQC TLS: 실험 및 정책 기반 배포 검증
 
-국산 양자내성암호를 통합한 OpenSSL에서 TLS (Transport Layer Security) 1.3 핸드셰이크의 지연·자원 사용을 측정하고, 실제 협상 결과를 이용해 배포 후보의 정책 적합성을 검증한 실험 기록이다. 이 폴더는 기존 원자료를 재분석·정리한 것으로 새로운 AWS (Amazon Web Services) 실행을 포함하지 않는다.
+후속 실행 결과: [실행 순서 균형화 측정 보고서](balanced/README.md) · [English](balanced/README.en.md) · [그림 모음](balanced/gallery.html). 후속 결과는 기존 실행과 별도로 집계했으며 개별 실행 증적과 함께 제공한다.
+
+국산 양자내성암호를 통합한 OpenSSL에서 TLS (Transport Layer Security) 1.3 핸드셰이크의 지연·자원 사용을 측정하고, 실제 협상 결과를 이용해 배포 후보의 정책 적합성을 검증한 실험 기록이다. 아래 주요 관측 표와 번호 문서는 최초 AWS (Amazon Web Services) 원자료의 재분석이다. 이후 실행은 `balanced/`와 `systems/`에 별도 소스·이미지·원기록으로 보존한다.
+
+추가 네트워크·부하 실험: [한국어 보고서](systems/README.md) · [English](systems/README.en.md) · [그림 모음](systems/gallery.html). 첫 배포 부하 실패와 별도 재시험을 구분해 보존했다.
+
+최신 전환·성능 승인·복구 실험: [한국어](release/README.md) · [English](release/README.en.md) · [그림 모음](release/gallery.html). 기존 결과와 별도로 집계했다.
 
 ## 문서
 
@@ -25,7 +31,7 @@
 
 ## 재현과 증적
 
-저장소 루트에서 `.venv/bin/python 'after claude/scripts/figures.py'`를 실행하면 그림을 재생성한다. Python 환경에는 matplotlib이 필요하다. 스크립트는 세션 원기록에서 중앙값을 다시 계산하고 `summary.csv`의 129개 행과 대조한다.
+저장소 루트에서 `.venv/bin/python 'after_claude/scripts/figures.py'`를 실행하면 그림을 재생성한다. Python 환경에는 matplotlib이 필요하다. 스크립트는 세션 원기록에서 중앙값을 다시 계산하고 `summary.csv`의 129개 행과 대조한다.
 
 - `data/measurements.public.json`: 성능·메모리 원기록의 비식별 사본
 - `data/gate.public.json`: 최종 AWS 게이트 증적의 비식별 사본

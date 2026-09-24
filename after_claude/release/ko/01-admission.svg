@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="781.626233pt" height="345.648pt" viewBox="0 0 781.626233 345.648" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-09-25T02:52:38.049567</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 345.648 
+L 781.626233 345.648 
+L 781.626233 -0 
+L 0 -0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 51.365 270.895175 
+L 384.366233 270.895175 
+L 384.366233 83.76 
+L 51.365 83.76 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <defs>
+       <path id="ma09ef9eb83" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="99.148599" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(68.761591 298.562955) rotate(-10)">지연 주입 후보</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_2">
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="217.865616" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(173.097953 303.63435) rotate(-10)">최초 KPQC 배포 후보</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_3">
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="336.582633" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(296.825179 301.86748) rotate(-10)">후속 업데이트 후보</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_4">
+      <path d="M 51.365 270.895175 
+L 384.366233 270.895175 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_5">
+      <defs>
+       <path id="m39012e8441" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m39012e8441" x="51.365" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="44.365" y="275.845175" transform="rotate(-0 44.365 275.845175)">0</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_6">
+      <path d="M 51.365 224.307892 
+L 384.366233 224.307892 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_7">
+      <g>
+       <use xlink:href="#m39012e8441" x="51.365" y="224.307892" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="44.365" y="229.257892" transform="rotate(-0 44.365 229.257892)">100</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_8">
+      <path d="M 51.365 177.720609 
+L 384.366233 177.720609 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_9">
+      <g>
+       <use xlink:href="#m39012e8441" x="51.365" y="177.720609" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="44.365" y="182.670609" transform="rotate(-0 44.365 182.670609)">200</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_10">
+      <path d="M 51.365 131.133325 
+L 384.366233 131.133325 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_11">
+      <g>
+       <use xlink:href="#m39012e8441" x="51.365" y="131.133325" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="44.365" y="136.083325" transform="rotate(-0 44.365 136.083325)">300</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_12">
+      <path d="M 51.365 84.546042 
+L 384.366233 84.546042 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_13">
+      <g>
+       <use xlink:href="#m39012e8441" x="51.365" y="84.546042" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_8">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="44.365" y="89.496042" transform="rotate(-0 44.365 89.496042)">400</text>
+     </g>
+    </g>
+    <g id="text_9">
+     <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="17.1" y="177.327587" transform="rotate(-90 17.1 177.327587)">p95 (ms)</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 66.50142 270.895175 
+L 131.795779 270.895175 
+L 131.795779 92.715778 
+L 66.50142 92.715778 
+z
+" clip-path="url(#p6af3c7d1c0)" style="fill: #d55e00; opacity: 0.8"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 185.218437 270.895175 
+L 250.512796 270.895175 
+L 250.512796 255.431866 
+L 185.218437 255.431866 
+z
+" clip-path="url(#p6af3c7d1c0)" style="fill: #0072b2; opacity: 0.8"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 303.935454 270.895175 
+L 369.229813 270.895175 
+L 369.229813 255.643996 
+L 303.935454 255.643996 
+z
+" clip-path="url(#p6af3c7d1c0)" style="fill: #009e73; opacity: 0.8"/>
+   </g>
+   <g id="line2d_14">
+    <path d="M 51.365 177.720609 
+L 384.366233 177.720609 
+" clip-path="url(#p6af3c7d1c0)" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #222222; stroke-width: 1.5"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 51.365 270.895175 
+L 51.365 83.76 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 51.365 270.895175 
+L 384.366233 270.895175 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="PathCollection_1">
+    <defs>
+     <path id="ma6d0c0d664" d="M 0 3.162278 
+C 0.838646 3.162278 1.643056 2.82908 2.236068 2.236068 
+C 2.82908 1.643056 3.162278 0.838646 3.162278 0 
+C 3.162278 -0.838646 2.82908 -1.643056 2.236068 -2.236068 
+C 1.643056 -2.82908 0.838646 -3.162278 0 -3.162278 
+C -0.838646 -3.162278 -1.643056 -2.82908 -2.236068 -2.236068 
+C -2.82908 -1.643056 -3.162278 -0.838646 -3.162278 0 
+C -3.162278 0.838646 -2.82908 1.643056 -2.236068 2.236068 
+C -1.643056 2.82908 -0.838646 3.162278 0 3.162278 
+z
+" style="stroke: #182b3a"/>
+    </defs>
+    <g clip-path="url(#p6af3c7d1c0)">
+     <use xlink:href="#ma6d0c0d664" x="84.902557" y="92.671199" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="99.148599" y="92.715778" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="113.394641" y="92.951037" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="PathCollection_2">
+    <g clip-path="url(#p6af3c7d1c0)">
+     <use xlink:href="#ma6d0c0d664" x="203.619574" y="255.525387" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="217.865616" y="255.431866" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="232.111658" y="255.391613" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="PathCollection_3">
+    <g clip-path="url(#p6af3c7d1c0)">
+     <use xlink:href="#ma6d0c0d664" x="322.336591" y="255.428906" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="336.582633" y="255.728491" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="350.828675" y="255.643996" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 13.2px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="217.865616" y="77.76" transform="rotate(-0 217.865616 77.76)">접속 시도 완료 지연</text>
+   </g>
+   <g id="legend_1">
+    <g id="line2d_15">
+     <path d="M 283.066545 99.71 
+L 294.066545 99.71 
+L 305.066545 99.71 
+" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #222222; stroke-width: 1.5"/>
+    </g>
+    <g id="text_11">
+     <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: start" x="313.866545" y="103.56" transform="rotate(-0 313.866545 103.56)">SLO: 200 ms</text>
+    </g>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="patch_8">
+    <path d="M 441.425 270.895175 
+L 774.426233 270.895175 
+L 774.426233 83.76 
+L 441.425 83.76 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_3">
+    <g id="xtick_4">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="489.208599" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(458.821591 298.562955) rotate(-10)">지연 주입 후보</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="607.925616" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(563.157953 303.63435) rotate(-10)">최초 KPQC 배포 후보</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#ma09ef9eb83" x="726.642633" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_14">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'" transform="translate(686.885179 301.86748) rotate(-10)">후속 업데이트 후보</text>
+     </g>
+    </g>
+   </g>
+   <g id="matplotlib.axis_4">
+    <g id="ytick_6">
+     <g id="line2d_19">
+      <path d="M 441.425 270.895175 
+L 774.426233 270.895175 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="270.895175" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_15">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="275.845175" transform="rotate(-0 434.425 275.845175)">0</text>
+     </g>
+    </g>
+    <g id="ytick_7">
+     <g id="line2d_21">
+      <path d="M 441.425 245.827961 
+L 774.426233 245.827961 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="245.827961" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_16">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="250.777961" transform="rotate(-0 434.425 250.777961)">50</text>
+     </g>
+    </g>
+    <g id="ytick_8">
+     <g id="line2d_23">
+      <path d="M 441.425 220.760748 
+L 774.426233 220.760748 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="220.760748" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_17">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="225.710748" transform="rotate(-0 434.425 225.710748)">100</text>
+     </g>
+    </g>
+    <g id="ytick_9">
+     <g id="line2d_25">
+      <path d="M 441.425 195.693534 
+L 774.426233 195.693534 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_26">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="195.693534" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_18">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="200.643534" transform="rotate(-0 434.425 200.643534)">150</text>
+     </g>
+    </g>
+    <g id="ytick_10">
+     <g id="line2d_27">
+      <path d="M 441.425 170.626321 
+L 774.426233 170.626321 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_28">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="170.626321" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_19">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="175.576321" transform="rotate(-0 434.425 175.576321)">200</text>
+     </g>
+    </g>
+    <g id="ytick_11">
+     <g id="line2d_29">
+      <path d="M 441.425 145.559107 
+L 774.426233 145.559107 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_30">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="145.559107" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_20">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="150.509107" transform="rotate(-0 434.425 150.509107)">250</text>
+     </g>
+    </g>
+    <g id="ytick_12">
+     <g id="line2d_31">
+      <path d="M 441.425 120.491893 
+L 774.426233 120.491893 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_32">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="120.491893" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_21">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="125.441893" transform="rotate(-0 434.425 125.441893)">300</text>
+     </g>
+    </g>
+    <g id="ytick_13">
+     <g id="line2d_33">
+      <path d="M 441.425 95.42468 
+L 774.426233 95.42468 
+" clip-path="url(#p0de52e3de0)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.18; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_34">
+      <g>
+       <use xlink:href="#m39012e8441" x="441.425" y="95.42468" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_22">
+      <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: end" x="434.425" y="100.37468" transform="rotate(-0 434.425 100.37468)">350</text>
+     </g>
+    </g>
+    <g id="text_23">
+     <text style="font-size: 11px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="407.369688" y="177.327587" transform="rotate(-90 407.369688 177.327587)">p95 (ms)</text>
+    </g>
+   </g>
+   <g id="patch_9">
+    <path d="M 456.56142 270.895175 
+L 521.855779 270.895175 
+L 521.855779 92.710991 
+L 456.56142 92.710991 
+z
+" clip-path="url(#p0de52e3de0)" style="fill: #d55e00; opacity: 0.8"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 575.278437 270.895175 
+L 640.572796 270.895175 
+L 640.572796 267.917478 
+L 575.278437 267.917478 
+z
+" clip-path="url(#p0de52e3de0)" style="fill: #0072b2; opacity: 0.8"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 693.995454 270.895175 
+L 759.289813 270.895175 
+L 759.289813 267.889645 
+L 693.995454 267.889645 
+z
+" clip-path="url(#p0de52e3de0)" style="fill: #009e73; opacity: 0.8"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 441.425 270.895175 
+L 441.425 83.76 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 441.425 270.895175 
+L 774.426233 270.895175 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="PathCollection_4">
+    <g clip-path="url(#p0de52e3de0)">
+     <use xlink:href="#ma6d0c0d664" x="474.962557" y="92.671199" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="489.208599" y="92.710991" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="503.454641" y="93.050282" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="PathCollection_5">
+    <g clip-path="url(#p0de52e3de0)">
+     <use xlink:href="#ma6d0c0d664" x="593.679574" y="268.13138" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="607.925616" y="267.873169" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="622.171658" y="267.917478" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="PathCollection_6">
+    <g clip-path="url(#p0de52e3de0)">
+     <use xlink:href="#ma6d0c0d664" x="712.396591" y="267.889645" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="726.642633" y="267.872022" style="fill: #ffffff; stroke: #182b3a"/>
+     <use xlink:href="#ma6d0c0d664" x="740.888675" y="267.928157" style="fill: #ffffff; stroke: #182b3a"/>
+    </g>
+   </g>
+   <g id="text_24">
+    <text style="font-size: 13.2px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="607.925616" y="77.76" transform="rotate(-0 607.925616 77.76)">TLS 핸드셰이크 지연</text>
+   </g>
+  </g>
+  <g id="text_25">
+   <text style="font-size: 15px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="391.125" y="20.7" transform="rotate(-0 391.125 20.7)">암호 적합성과 성능 승인 조건의 분리</text>
+  </g>
+  <g id="text_26">
+   <text style="font-size: 10px; font-family: 'Apple SD Gothic Neo'; text-anchor: middle" x="391.125" y="335.448" transform="rotate(-0 391.125 335.448)">점: 측정 구간별 p95 · 막대: 세 구간 p95의 중앙값</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p6af3c7d1c0">
+   <rect x="51.365" y="83.76" width="333.001233" height="187.135175"/>
+  </clipPath>
+  <clipPath id="p0de52e3de0">
+   <rect x="441.425" y="83.76" width="333.001233" height="187.135175"/>
+  </clipPath>
+ </defs>
+</svg>

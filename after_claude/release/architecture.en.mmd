@@ -1,0 +1,11 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':24,'rankSpacing':30}}}%%
+flowchart TB
+  C["Release candidate"] --> G{"Observed TLS and certificate checks"}
+  G -->|Pass| P{"Fixed-arrival performance gate"}
+  G -->|Reject| K["Retain current service"]
+  P -->|Fail SLO| K
+  P -->|Admit| A["Switch active route<br/>Classical → First KPQC release → KPQC update"]
+  A --> H["Connection and certificate health checks"]
+  H -->|"Two consecutive failures"| R{"Previous approved service passes TLS checks?"}
+  R -->|Yes| B["Restore approved KPQC version<br/>Revalidate connectivity and crypto policy"]
+  R -->|No| X["Reject automatic recovery<br/>No classical rollback"]

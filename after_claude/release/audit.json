@@ -1,0 +1,83 @@
+{
+  "status": "passed",
+  "run_id": "aws-release-20260924T172059Z",
+  "source_commit": "c232f7dbebb75180e612ffa381cc58bfb32aafd3",
+  "image_identity": "sha256:35e5c6099af1ed7afaf30b07d367958ad0bc99cccbdc7c079c398fa30f138dca",
+  "input_sha256": "a6419c991562dce44996c528e7e35cb7fe2b8f41c376919968e6d7aa5459033b",
+  "policy_sha256": "d70186fa53bbdff60ee0f880a9b1a35fff5ab95be13f42f72dd7ef3fc05d3dd9",
+  "assertions": 24,
+  "candidate_summary": [
+    {
+      "candidate": "slow-v2",
+      "cryptographic_pass": true,
+      "admitted": false,
+      "attempts": 300,
+      "successes": 300,
+      "p95_admission_ms_by_window": [
+        382.559282,
+        382.463592,
+        381.958607
+      ],
+      "p95_tls_ms_by_window": [
+        355.492196,
+        355.412825,
+        354.736063
+      ],
+      "on_time_fraction_by_window": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "candidate": "good-v2",
+      "cryptographic_pass": true,
+      "admitted": true,
+      "attempts": 300,
+      "successes": 300,
+      "p95_admission_ms_by_window": [
+        32.991381,
+        33.192124,
+        33.278527
+      ],
+      "p95_tls_ms_by_window": [
+        5.512768,
+        6.027805,
+        5.939426
+      ],
+      "on_time_fraction_by_window": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "candidate": "good-v3",
+      "cryptographic_pass": true,
+      "admitted": true,
+      "attempts": 300,
+      "successes": 300,
+      "p95_admission_ms_by_window": [
+        33.198478,
+        32.555417,
+        32.736785
+      ],
+      "p95_tls_ms_by_window": [
+        5.994942,
+        6.030093,
+        5.918124
+      ],
+      "on_time_fraction_by_window": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ],
+  "detection_ms": 1596.157765,
+  "recovery_ms": 2950.514828,
+  "recovery_scheduled": 150,
+  "recovery_failures": 21,
+  "old_pqc_successes": 23,
+  "restored_pqc_successes": 106
+}

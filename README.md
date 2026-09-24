@@ -2,102 +2,66 @@
 
 **한국어** | [English](README.en.md)
 
-**KPQC 기반 TLS (Transport Layer Security) 1.3의 핸드셰이크 성능 및 정책 기반 배포 검증을 위한 재현 가능한 실험 프로젝트입니다.**
+국산 양자내성암호를 통합한 OpenSSL로 **TLS 핸드셰이크 성능을 측정하고, 암호·성능 기준에 따라 배포를 승인하거나 거절하며, 장애 시 이전 승인 서비스로 복구하는 프로젝트**입니다.
 
-본 프로젝트는 두 가지 연구 질문을 다룹니다. (1) KEM (Key Encapsulation Mechanism)·서명 구성에 따른 TLS 연결 수립 비용은 얼마인가? (2) 실제 TLS 관측 결과로 배포 후보의 암호 설정 회귀를 탐지할 수 있는가?
+[`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3) 이미지를 사용합니다. 성능 측정 대상은 SMAUG·NTRU+ KEM (Key Encapsulation Mechanism)과 HAETAE·AIMer 서명입니다. 전환·복구 실험은 SMAUG1 + HAETAE2를 사용합니다.
 
-본 프로젝트의 KPQC–OpenSSL 통합 환경인 [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3) 이미지를 사용합니다. KEM은 SMAUG·NTRU+, 서명은 HAETAE·AIMer를 대상으로 합니다.
+## 배포 흐름
 
-## 1. 시스템 구조 및 배포 정책
+![배포 및 복구 흐름](after_claude/release/architecture.ko.png)
 
-![정책 기반 배포 게이트](docs/architecture/ko/fig1-architecture.png)
+1. **최초 KPQC 배포 후보**: 기존 X25519 + ECDSA P-256 서비스를 SMAUG1 + HAETAE2로 전환합니다.
+2. **후속 업데이트 후보**: 동일 암호 조합을 유지하면서 새로운 서버 인증서와 별도 서버 프로세스로 갱신합니다. 업무 기능의 변경은 포함하지 않습니다.
+3. **장애 복구**: 후속 업데이트에 장애를 주입하고, 이전 승인 서비스의 현재 TLS 연결·인증서·암호 정책을 확인한 뒤 연결 경로를 복구합니다. 복구 후에도 KPQC를 유지합니다.
 
-*그림 1. 후보의 관측 결과를 정책과 대조하여 활성 경로 전환을 결정하는 배포 게이트.*
+**TLS 연결 성공과 배포 승인은 다릅니다.** 실제 협상 결과가 승인된 암호 설정과 일치하고 성능 기준까지 만족해야 배포합니다. 정책 위반 또는 검증 자료 누락 시 기존 서비스를 유지합니다.
 
-- **Active**는 현재 트래픽을 처리하는 서비스, **candidate**는 활성화 전에 검사하는 새 버전입니다.
-- 시험 클라이언트는 TCP (Transmission Control Protocol) 라우터의 후보 경로에 접속합니다. 게이트는 실제 협상·인증서 검증·금지된 접속의 거절을 정책과 비교합니다.
-- 통과하면 후보로 활성 경로를 전환하고, 거절하면 기존 서비스를 유지합니다.
+## 성능 기반 배포 승인 결과
 
-기존 active도 PQC를 사용합니다. 핵심은 업데이트 중 암호 설정이 이전 상태로 돌아가는 것을 탐지하는 것입니다. **TLS 접속 성공과 배포 승인은 다릅니다.**
+서울 동일 가용 영역의 m7i.large EC2 (Elastic Compute Cloud) 두 대, 컨테이너별 CPU 2개·메모리 512 MiB, Docker 브리지 및 MTU (Maximum Transmission Unit) 1500 조건입니다. 후보마다 초당 10회, 10초 × 3구간으로 총 300회 접속을 시도했습니다.
 
-현재 [정책](policies/pqc-required.json)은 TLS 1.3 · SMAUG1 · HAETAE2 · TLS_AES_256_GCM_SHA384를 요구합니다. KEM과 서명은 cipher suite와 별도로 확인합니다.
+SLO (Service Level Objective)는 시험 전에 고정한 모의 서비스 목표입니다. 모든 구간에서 실패율 ≤1%, 200ms 이내 성공 비율 ≥99%, 성공 접속 완료 시간 p95 ≤200ms를 요구합니다. 부하 생성 지연 p95는 50ms 이하여야 합니다.
 
-| 시험 | 기대 결과 |
+| 배포 후보 | 암호 검사 | 구간별 접속 완료 시간 p95 | 배포 결과 |
+|---|---|---|---|
+| 350ms 지연 주입 후보 | 통과 | 382.56 / 382.46 / 381.96ms | 거절 |
+| 최초 KPQC 배포 후보 | 통과 | 32.99 / 33.19 / 33.28ms | 승인 |
+| 후속 업데이트 후보 | 통과 | 33.20 / 32.56 / 32.74ms | 승인 |
+
+접속 완료 시간은 **예정된 접속 시각부터 시험 클라이언트 종료까지**이며 초기화·TCP·TLS 등을 포함합니다. 순수 TLS (Transport Layer Security) 핸드셰이크 시간은 `SSL_connect` 호출 구간으로 별도 기록합니다. p95는 관측값의 95%가 그 값 이하인 백분위수입니다.
+
+장애 주입 요청부터 **감지 1.596초, 복구 확인 2.951초**를 관측했습니다. 장애 관측 중 150회 접속에서 21회 실패했고, 마지막 20회는 복구된 이전 서비스로 모두 성공했습니다. 이 결과는 무중단 전환을 의미하지 않습니다.
+
+[한글 상세 보고서](after_claude/release/README.md) · [English report](after_claude/release/README.en.md) · [그림 모음](after_claude/release/gallery.html) · [원자료 검증](after_claude/release/audit.json)
+
+## 암호 정책과 CI/CD
+
+암호 정책은 TLS 1.3, SMAUG1, HAETAE2, TLS_AES_256_GCM_SHA384를 요구합니다. KEM과 서명은 cipher suite와 별도로 확인합니다. 고전 KEM·서명 허용, TLS 1.2, 잘못된 인증서, 후보와 증적 불일치, 오래된 증적 및 프로브 오류를 검사합니다.
+
+GitHub Actions는 이미지 빌드·로컬 시험 후 OIDC (OpenID Connect)로 AWS 단기 권한을 얻고, SSH (Secure Shell)로 기존 서버·클라이언트에 동일 이미지를 배포합니다. 실행 후 증적을 저장하고 두 EC2를 중지하며 임시 SSH 규칙을 제거합니다. push CI는 EC2를 시작하지 않습니다.
+
+[이번 AWS 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)에서 **기존 암호 정책 검증 63개, 전환·성능 승인·복구 검증 24개**를 통과했습니다. 실험 소스는 `c232f7d`이며 후속 문서·CI 수정과 구분합니다. EC2 두 대의 중지는 워크플로와 별도 AWS 조회로 확인했습니다.
+
+## 다른 실험 및 재현
+
+| 실험 | 문서 |
 |---|---|
-| 승인된 PQC (Post-Quantum Cryptography) 구성 | 후보 승인·활성 경로 전환 |
-| 잘못된 KEM 또는 서명 | 거절 |
-| PQC와 고전암호를 함께 허용 | PQC 연결이 성공해도 고전 전용 접속이 성공하면 거절 |
-| TLS 1.2 접속 | 거절; 별도 양성 대조로 프로브 기능 확인 |
-| 후보·인증서·이미지·정책 불일치, 오래된 증적 | 거절 |
-| 프로브 타임아웃·손상된 출력 | 거절 |
+| 43개 암호 구성의 핸드셰이크·CPU·메모리 측정 | [환경](after_claude/01_environment.md) · [방법](after_claude/02_methods.md) · [결과](after_claude/03_results.md) |
+| 새 프로세스·재사용 프로세스의 실행 순서 균형화 | [한국어](after_claude/balanced/README.md) · [English](after_claude/balanced/README.en.md) |
+| MTU·네트워크 지연·HelloRetryRequest·동시 부하·부하 중 배포 | [한국어](after_claude/systems/README.md) · [English](after_claude/systems/README.en.md) |
+| 전환·성능 승인·자동 복구 | [계획](docs/RELEASE_EXPERIMENT_PLAN.md) · [한국어](after_claude/release/README.md) · [English](after_claude/release/README.en.md) |
 
-최종 게이트 기록에서 로컬·AWS (Amazon Web Services) 실행은 각각 **63/63개 검증 항목을 통과**했습니다. AWS 활성 경로 관측 69회에서 실패는 0회였습니다. 오류 후보의 예상된 거절도 시험 통과에 포함합니다. [최종 AWS 증적](after%20claude/data/gate.public.json)
+각 실험은 환경과 측정 구간이 다르므로 개별 보고서의 조건과 실행 기록을 따릅니다. HTML 보고서와 그림 모음은 저장소를 내려받아 브라우저로 열 수 있습니다.
 
-## 2. 실험 설계 및 주요 결과
-
-서울 동일 AZ의 m7i.large EC2 (Elastic Compute Cloud) 두 대에서 사설 IPv4·Docker host network·MTU (Maximum Transmission Unit) 9001로 측정했습니다. 7개 KEM 파라미터 × 6개 서명 파라미터와 고전 기준선, 총 43개 구성입니다.
-
-| 조건 | X25519 + ECDSA (Elliptic Curve Digital Signature Algorithm) | PQC 구성별 중앙값 범위 |
-|---|---:|---:|
-| 새 프로세스 | 1.388 ms | 3.503–11.287 ms |
-| 프로세스 재사용 | 0.538 ms | 2.403–10.529 ms |
-| 클라이언트 최대 RSS (Resident Set Size) 증가 | 460 KiB | 648–980 KiB |
-| 서버 최대 RSS 증가 | 420 KiB | 628–1,252 KiB |
-
-시간은 클라이언트 `SSL_connect` 호출 구간만 측정합니다. 모드·구성별 5라운드 × 3회이며, 재사용 조건도 세션 재개 없는 전체 핸드셰이크입니다. 메모리는 별도 실행 3회의 호출 구간 최대 RSS 증가량입니다.
-
-![기준선 및 SMAUG 핸드셰이크 지연](after%20claude/figures/ko/latency_smaug.png)
-
-*그림 2. 기준선 및 SMAUG 구성의 핸드셰이크 지연. 각 점은 구성·모드별 15회 연결의 중앙값입니다.*
-
-표의 범위는 PQC 구성별 중앙값의 최솟값과 최댓값입니다. 전체 조합의 그림과 측정 조건은 [결과 및 캡션](after%20claude/03_results.md), [환경·용어](after%20claude/01_environment.md), [실험 방법](after%20claude/02_methods.md)에 있습니다. [영어 그림·캡션](after%20claude/captions.en.md)
-
-## 3. CI/CD 및 실행 이력
-
-![배포 워크플로](docs/architecture/ko/fig2-deployment-flow.png)
-
-*그림 3. 수동 AWS 배포 워크플로. 정책 판정 이후의 성공·거절 경로는 공통 증적 수집 및 자원 정리 단계로 이어집니다.*
-
-| 워크플로 | 실행 | 역할 |
-|---|---|---|
-| [CI](.github/workflows/experiment.yml) | push / PR | 정책·정리 회귀 시험, Docker 기반 파일 실험 및 게이트 통합 시험 |
-| [AWS 배포 검증](.github/workflows/aws-deploy.yml) | main에서 수동 | 빌드·시험 → OIDC (OpenID Connect) → SSH (Secure Shell) 배포 → 게이트 → 증적 저장·정리 |
-
-OIDC는 AWS 단기 권한 취득에, SSH는 EC2 명령 실행에 사용합니다. push만으로 EC2를 시작하지 않습니다.
-
-**최신 63항목 게이트 및 위 성능 수치는 로컬 제어기로 AWS에서 실행한 결과입니다.** 기존 [GitHub Actions 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618)은 이전 32항목 시험이며 최신 결과와 구분합니다. 개정본의 [원격 CI 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36004626538)은 정책·정리·Docker 통합시험을 통과했습니다.
-
-## 4. 재현 및 코드 구성
-
-Docker Compose로 실험 환경을 실행합니다. 이미지는 Linux x86-64용이며, 동일한 기반 이미지를 사용하도록 SHA-256 식별자를 지정했습니다.
+Docker·Compose와 Linux amd64 실행 환경이 필요합니다. 기반 이미지는 SHA-256 digest로 고정했습니다.
 
 ```sh
 python3 scripts/test_gate_policy.py
+python3 scripts/test_release_policy.py
 python3 scripts/test_ci_deploy.py
 docker compose -f compose.gate.yaml run --build --rm gate
 ```
 
-| 파일 | 역할 |
-|---|---|
-| [gate_policy.py](scripts/gate_policy.py) | 관측된 TLS 결과의 정책 판정 |
-| [gate_suite.py](scripts/gate_suite.py) / [gate_worker.py](scripts/gate_worker.py) | 후보·부정 프로브·전환 시험 |
-| [tls_handshake.c](scripts/tls_handshake.c) | SSL 호출 시간·CPU (Central Processing Unit)·메모리·협상 계측 |
-| [extended_handshake.py](scripts/extended_handshake.py) | 구성 순서 무작위화·반복 측정 |
-| [ci_deploy.py](scripts/ci_deploy.py) | EC2 제어·이미지 동일성 확인·종료 정리 |
-| [figures.py](after%20claude/scripts/figures.py) | 공개 원기록 재집계·한영 그림 생성 |
+핵심 코드: [TLS 계측](scripts/tls_handshake.c), [암호 정책](scripts/gate_policy.py), [성능 정책](scripts/release_policy.py), [전환·복구 실험](scripts/release_experiments.py), [AWS 실행·정리](scripts/ci_deploy.py). [AWS 설정 가이드](docs/aws-setup.md)
 
-AWS 설정은 [가이드](docs/aws-setup.md)를 참조하세요. 기존 합성 금융 XML 서명·전송 실험은 `docker compose run --build --rm lab`으로 실행하며, 그 시간은 위 핸드셰이크 지표와 구분합니다.
-
-## 5. 적용 범위 및 후속 연구
-
-단일 EC2 쌍·순차 연결·직접 신뢰한 서버 리프 인증서 조건입니다. 커스텀 식별자를 사용하므로 외부 TLS 구현과의 상호운용성은 입증하지 않습니다. 서로 다른 보안 파라미터의 성능 순위나 운영 환경의 무중단·처리량을 주장하지 않습니다. 후보 증적 검증은 신뢰한 제어기를 전제로 합니다.
-
-현재 결과는 cold 이후 warm 순서입니다. [후속 계획](after%20claude/05_future_experiments.md)은 모드 순서 무작위화와 반복 실행, 네트워크 조건, 동시 부하, 부하 중 전환입니다. 계획은 완료 결과와 구분합니다. 실험 후 EC2는 중지하며 EBS는 유지합니다. 개인키·AWS 실행 설정·고객 데이터는 공개하지 않습니다.
-
-## 문서 및 검토 상태
-
-- [기술보고서](docs/TECHNICAL_REPORT.md) · [Technical report](docs/TECHNICAL_REPORT.en.md)
-- [3차 검토 기록](docs/PUBLICATION_REVIEW.md)
-- 상태: **사용자 검토 반영본**. 기존 실행 기록의 재분석이며 신규 실험 결과를 포함하지 않습니다.
-
-RSS·CPU·시간·메시지 바이트 및 MTU의 정의와 추가 검증 사항은 [측정 보완 문서](docs/MEASUREMENT_NOTES.md)를 참조하세요.
+결과는 사용자 제작 OpenSSL 이미지, 제한된 실험 부하 및 직접 신뢰한 서버 인증서 조건의 관측입니다. 운영 PKI (Public Key Infrastructure) 체인, 장기간 가용성, 금융 거래 보존 및 다른 TLS 구현과의 상호운용은 검증 범위에 포함하지 않습니다. EC2 중지 후에도 EBS (Elastic Block Store) 볼륨은 유지됩니다.

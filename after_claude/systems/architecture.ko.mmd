@@ -1,0 +1,11 @@
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','clusterBkg':'#FFFFFF','clusterBorder':'#AAB8C2','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':30,'rankSpacing':35}}}%%
+flowchart TB
+  G["GitHub Actions<br/>빌드 · 사전 검증 · 실행 · 정리"]
+  subgraph E["기존 EC2 두 대 · 동일 가용 영역 · 각 CPU 한도 2개"]
+    direction LR
+    C["클라이언트<br/>TLS 접속 프로세스 1 / 4 / 16개<br/>컨테이너 MTU · 송신 지연 제어"]
+    S["서버<br/>TLS 측정 서비스 / 배포 시험 라우터<br/>컨테이너 MTU · 송신 지연 제어"]
+    C <-->|"Private IPv4 · TCP 4433"| S
+  end
+  G -.->|"SSH control"| E
+  E --> A["원자료 검증 · 결과 및 그림<br/>실험 종료 후 EC2 중지 확인"]

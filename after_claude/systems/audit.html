@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>검증 요약 / Audit</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f8fa;color:#182b3a;
+font:16px/1.75 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{max-width:1120px;margin:32px auto;padding:32px;background:#fff}
+nav{display:flex;flex-wrap:wrap;gap:8px 20px;border-bottom:1px solid #dce3e8;padding-bottom:16px}
+a{color:#006da8;overflow-wrap:anywhere}h1{line-height:1.35}h2{margin-top:2em}
+img{max-width:100%;height:auto}table{border-collapse:collapse;display:block;overflow-x:auto;margin:20px 0}
+th,td{border:1px solid #dce3e8;padding:9px 12px}th{background:#edf3f7}
+pre{padding:16px;background:#f1f4f7;overflow:auto;line-height:1.5}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
+@media(max-width:640px){main{margin:0;padding:20px}h1{font-size:26px}}
+</style>
+</head>
+<body><main>
+<nav aria-label="Documents"><a href="gallery.html">그림 모음 / Gallery</a>
+<a href="README.html">보고서</a><a href="README.en.html">Report</a>
+<a href="METHODS.html">실험 방법</a><a href="METHODS.en.html">Methods</a>
+<a href="audit.html">Audit</a></nav>
+<h1>검증 요약 / Audit</h1><pre>{
+  &quot;run_id&quot;: &quot;aws-systems-20260924T150755Z&quot;,
+  &quot;source_commit&quot;: &quot;fa1202cafff8b1683d1df7752ebc04365032583d&quot;,
+  &quot;image_identity&quot;: &quot;sha256:ad58b310c58e3f3d42a1c2ba2fda41836cf562e12a7fd0b94ce77c97f0e828d2&quot;,
+  &quot;input_sha256&quot;: &quot;f978e652e6e01cac41b9a40594b4e2562650ceb76e7883f5ad1acd4c249b80ce&quot;,
+  &quot;workflow_status&quot;: &quot;failed&quot;,
+  &quot;performance_assertions&quot;: 654,
+  &quot;network_connections&quot;: 450,
+  &quot;network_analyzed&quot;: 270,
+  &quot;hrr_connections&quot;: 360,
+  &quot;hrr_analyzed&quot;: 216,
+  &quot;throughput_connections&quot;: 273091,
+  &quot;server_priming_connections&quot;: 720,
+  &quot;performance_audit&quot;: &quot;passed&quot;,
+  &quot;initial_rollout&quot;: {
+    &quot;status&quot;: &quot;failed&quot;,
+    &quot;recorded_connections&quot;: 26701,
+    &quot;client_exit_codes&quot;: [
+      2,
+      2,
+      2,
+      2
+    ],
+    &quot;failed_assertions&quot;: [
+      &quot;rollout-both-approved-identities&quot;
+    ]
+  },
+  &quot;rollout_run_id&quot;: &quot;aws-systems-20260924T161301Z&quot;,
+  &quot;rollout_source_commit&quot;: &quot;c9ebcfaf8dcfe50fa3a6e28f77e2ac20e1a95b96&quot;,
+  &quot;rollout_image_identity&quot;: &quot;sha256:f199728c9ed1851434dd76fe3cf58d1b309458fab0cf27f096049ab8311b7a47&quot;,
+  &quot;rollout_assertions&quot;: 8,
+  &quot;rollout_connections&quot;: 24504,
+  &quot;rollout_old_connections&quot;: 3847,
+  &quot;rollout_new_connections&quot;: 20657,
+  &quot;rollout_failed&quot;: 0,
+  &quot;rollout_elapsed_seconds&quot;: 73.760747107,
+  &quot;rollout_audit&quot;: &quot;passed&quot;
+}</pre>
+<footer><a href="audit.json" download>원본 다운로드 / Download source</a></footer>
+</main></body></html>

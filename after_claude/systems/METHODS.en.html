@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Experimental methods</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f8fa;color:#182b3a;
+font:16px/1.75 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+main{max-width:1120px;margin:32px auto;padding:32px;background:#fff}
+nav{display:flex;flex-wrap:wrap;gap:8px 20px;border-bottom:1px solid #dce3e8;padding-bottom:16px}
+a{color:#006da8;overflow-wrap:anywhere}h1{line-height:1.35}h2{margin-top:2em}
+img{max-width:100%;height:auto}table{border-collapse:collapse;display:block;overflow-x:auto;margin:20px 0}
+th,td{border:1px solid #dce3e8;padding:9px 12px}th{background:#edf3f7}
+pre{padding:16px;background:#f1f4f7;overflow:auto;line-height:1.5}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em}
+footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
+@media(max-width:640px){main{margin:0;padding:20px}h1{font-size:26px}}
+</style>
+</head>
+<body><main>
+<nav aria-label="Documents"><a href="gallery.html">그림 모음 / Gallery</a>
+<a href="README.html">보고서</a><a href="README.en.html">Report</a>
+<a href="METHODS.html">실험 방법</a><a href="METHODS.en.html">Methods</a>
+<a href="audit.html">Audit</a></nav>
+<h1>Methods: network sensitivity and concurrent deployment</h1>
+<h2>Questions and environment</h2>
+<p>The experiment evaluates (1) MTU and delay sensitivity, (2) the incremental cost of one HRR, (3) concurrent handshake throughput, and (4) policy-gated deployment while connections continue.</p>
+<p>Two existing m7i.large EC2 instances communicate over private IPv4 within one Availability Zone in Seoul. Each experiment container has a two-CPU quota and a 512 MiB memory limit. No new EC2 instance is created. The tested profiles are X25519 + ECDSA P-256 and {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f}. These represent four KPQC families, rather than all parameter sets or a security-level-equivalent ranking.</p>
+<p><img alt="Architecture" src="architecture.en.png" /></p>
+<p>Performance measurements connect directly to the benchmark TLS service. The separate deployment trial uses a TCP router to select active and candidate services. SSH (Secure Shell) carries experiment control, not the measured TLS traffic.</p>
+<h2>Controlled network and full handshakes</h2>
+<p>MTU (Maximum Transmission Unit) is set to 1500 or 9001 on container interfaces; both conditions use the same Docker bridge topology. Host interfaces and SSH access remain unchanged. All EC2 instance types support MTU1500, and Internet-gateway traffic has a 1500-byte limit, making this a useful sensitivity comparison with the previous jumbo-frame environment. <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network_mtu.html">AWS documentation</a></p>
+<p>Netem adds 0, 5 or 15 ms of egress delay at each endpoint, corresponding nominally to 0, 10 or 30 ms added RTT (Round-Trip Time). TCP_INFO records the observed MSS (Maximum Segment Size), path MTU and smoothed RTT. TCP segmentation, generic segmentation and generic receive offload must be disabled. Receiver-ingress placement is recommended for realistic TCP network emulation; this experiment instead reports controlled endpoint-egress sensitivity and does not infer WAN throughput. Concurrent throughput is measured without injected delay. <a href="https://man7.org/linux/man-pages/man8/tc-netem.8.html">Netem documentation</a></p>
+<p>Client latency brackets one SSL_connect call using a monotonic clock. TCP setup, the benchmark readiness byte, JSON output and TLS shutdown are outside this interval. Each condition uses five full handshakes in one process with a reused SSL_CTX; the first two are retained as warmup and excluded from latency summaries. Three within-run blocks randomize the condition order. Session caching and tickets are disabled.</p>
+<p>For HRR (HelloRetryRequest) induction, the client lists X25519 first and also supports the target KPQC group; the server permits only the target group. The trace must show exactly one HRR, versus zero in the matching-key-share control, with the same final group and CertificateVerify signature. MTU is 1500 and all three delay settings are tested.</p>
+<p>Every connection is checked for successful certificate verification, TLS1.3, expected negotiation codes, no resumption and the intended HRR count. Directional handshake-message byte counts must agree across endpoints. These counts exclude TLS record, TCP/IP and Ethernet overhead.</p>
+<h2>Concurrent service and deployment</h2>
+<p>Eight prefork server processes share a listening socket and each reuse an independent SSL_CTX. Sixteen priming connections precede each load window. The worker count is checked before and after the window.</p>
+<p>One, four or sixteen client processes generate closed-loop full handshakes for eight seconds per condition, repeated in three shuffled blocks. Clients initialize their SSL_CTX before a common start signal; the first handshake in each process is included. Throughput divides completed handshakes by the actual load-window duration and therefore reflects TCP setup, termination and instrumentation overhead. It measures the instrumented service-generator pair, not cryptographic operation speed or absolute server capacity.</p>
+<p>In addition to SSL_connect latency, the collector records TCP-connect start through SSL_connect return, including readiness waiting. The latter makes queueing visible when all server workers are busy. Each window's p95 is computed from its observed connection distribution.</p>
+<p>The deployment trial keeps four clients connecting to the active route. A mixed-KEM candidate must be rejected because a classical-only probe succeeds. A subsequent compliant candidate may be promoted only after the existing gate validates positive/negative probes and candidate binding. Peer-certificate SHA-256 fingerprints distinguish the old and new services. Any rejected-candidate identity on the active route or failed load handshake causes validation failure.</p>
+<p>This is one bounded transition trial. It does not establish a production availability SLA or application-data continuity on established connections.</p>
+<h2>Analysis and reproducibility</h2>
+<p>Network and HRR figures show block medians and the median of those three values. Throughput figures similarly show three observed load-window values and their median. These are repeated blocks on one instance pair, not independent instance replications.</p>
+<p>Record the source commit, exact delivered image identity, workflow ID, raw-record hash and cleanup outcome. Report this bridge-network experiment separately from prior host-network measurements. Certificate chains and memory are outside this follow-up run.</p>
+<footer><a href="METHODS.en.md" download>원본 다운로드 / Download source</a></footer>
+</main></body></html>

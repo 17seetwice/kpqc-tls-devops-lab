@@ -1,0 +1,16 @@
+{
+  "checked_at": "2026-09-24T16:16:58.874325+00:00",
+  "method": "Independent AWS DescribeInstances query, Project=kpqc-devops-lab, ap-northeast-2",
+  "instances": [
+    {
+      "State": "stopped",
+      "Type": "m7i.large",
+      "AvailabilityZone": "ap-northeast-2a"
+    },
+    {
+      "State": "stopped",
+      "Type": "m7i.large",
+      "AvailabilityZone": "ap-northeast-2a"
+    }
+  ]
+}
