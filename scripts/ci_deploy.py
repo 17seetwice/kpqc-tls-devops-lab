@@ -138,7 +138,7 @@ def deploy(image, extended=False):
         if extended:
             subprocess.run(['python3','scripts/extended_handshake.py','--server',nodes[ids['server']]['PublicIpAddress'],
                             '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],
-                            '--image',image],check=True,cwd=ROOT)
+                            '--image',image,*(['--balanced'] if os.environ.get('KPQC_BALANCED_LATENCY')=='1' else [])],check=True,cwd=ROOT)
     # 시험 성공뿐 아니라 중간 실패에도 정리한다. 강제 종료/API 장애 시에는 별도 정리 단계와 상태 확인이 필요하다.
     finally:
         cleanup()

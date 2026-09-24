@@ -65,7 +65,7 @@
 
 OIDC는 AWS 단기 권한 취득에, SSH는 EC2 명령 실행에 사용합니다. push만으로 EC2를 시작하지 않습니다.
 
-**최신 63항목 게이트 및 위 성능 수치는 로컬 제어기로 AWS에서 실행한 결과입니다.** 기존 [GitHub Actions 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618)은 이전 32항목 시험이며 최신 결과와 구분합니다. 현재 문서 개정안에 대한 새 원격 CI 실행은 아직 수행하지 않았습니다.
+**최신 63항목 게이트 및 위 성능 수치는 로컬 제어기로 AWS에서 실행한 결과입니다.** 기존 [GitHub Actions 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618)은 이전 32항목 시험이며 최신 결과와 구분합니다. 개정본의 [원격 CI 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36004626538)은 정책·정리·Docker 통합시험을 통과했습니다.
 
 ## 4. 재현 및 코드 구성
 

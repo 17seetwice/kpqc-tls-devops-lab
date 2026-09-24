@@ -26,6 +26,19 @@ for path in sorted((root/'artifacts').glob('*gate-*/results.json')):
                       'required_legacy_decision':s.get('required_legacy_decision')} for s in data['scenarios']],
         'promoted_version':data.get('promotion',{}).get('active',{}).get('version'),
     })
+# Latency records contain only allowlisted measurements; exclude host/runtime metadata.
+summary['handshake_experiments'] = []
+for path in sorted((root/'artifacts').glob('*-extended-*/results.json')):
+    data = json.loads(path.read_text())
+    keys = ['run_id','status','started_at','ended_at','image_identity','source_commit',
+            'random_seed','measurement','schedule','rounds']
+    public = {k:data[k] for k in keys if k in data}
+    import hashlib
+    public['source_results_sha256'] = hashlib.sha256(path.read_bytes()).hexdigest()
+    public['cleanup_ok'] = not data.get('cleanup_errors')
+    (out/(path.parent.name+'.json')).write_text(json.dumps(public,indent=2))
+    summary['handshake_experiments'].append({'run_id':data['run_id'],'status':data['status'],
+                                           'cleanup_ok':public['cleanup_ok']})
 # 이미지 식별자·커밋·정리 성공 여부를 남겨 어떤 코드와 이미지로 실행했는지 추적한다.
 state = root/'.aws-runtime/ci-state.json'
 if state.exists():

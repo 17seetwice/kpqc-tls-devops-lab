@@ -2,6 +2,11 @@ name: AWS PQC deployment gates
 # Actions 화면에서 수동 실행한다. push/PR마다 유료 EC2 실험을 시작하지 않는다.
 on:
   workflow_dispatch:
+    inputs:
+      balanced_latency:
+        description: Run ten balanced cold/warm latency blocks after deployment gates
+        type: boolean
+        default: false
 permissions:
   contents: read
 # 같은 EC2 두 대를 사용하는 배포 실행을 직렬화해 서로 충돌하지 않게 한다.
@@ -18,6 +23,7 @@ jobs:
       # GitHub OIDC 토큰으로 AWS 전용 역할의 단기 인증을 받는다. 영구 AWS 키를 사용하지 않는다.
       id-token: write
     env:
+      KPQC_BALANCED_LATENCY: ${{ inputs.balanced_latency && '1' || '0' }}
       KPQC_SERVER_INSTANCE_ID: ${{ secrets.KPQC_SERVER_INSTANCE_ID }}
       KPQC_CLIENT_INSTANCE_ID: ${{ secrets.KPQC_CLIENT_INSTANCE_ID }}
       KPQC_SERVER_SG_ID: ${{ secrets.KPQC_SERVER_SG_ID }}
@@ -34,6 +40,9 @@ jobs:
           docker build -f Dockerfile.gate -t kpqc-lab:gate .
           mkdir -p artifacts
           docker run --rm --network none --cpus 2 --memory 512m --tmpfs /state:size=64m -v "$PWD/artifacts:/results-root" --entrypoint python3 kpqc-lab:gate /app/scripts/gate_suite.py --local
+      - name: Verify balanced latency collector locally
+        if: inputs.balanced_latency
+        run: docker run --rm --network none --cpus 2 --memory 512m --tmpfs /state:size=64m -v "$PWD/artifacts:/results-root" --entrypoint python3 kpqc-lab:gate /app/scripts/extended_handshake.py --local --balanced --smoke
       - name: Obtain short-lived AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -52,7 +61,12 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > .aws-runtime/known_hosts
       # ci_deploy가 EC2와 이미지 전달을 관리하고 gate_suite가 실제 TLS 후보 판정·전환을 수행한다.
       - name: Deploy exact tested image and exercise approval and rejection
-        run: python3 scripts/ci_deploy.py
+        run: |
+          if [ "$KPQC_BALANCED_LATENCY" = "1" ]; then
+            python3 scripts/ci_deploy.py --extended
+          else
+            python3 scripts/ci_deploy.py
+          fi
       # 앞 단계 실패에도 정리를 시도한다. 강제 종료나 AWS 장애 시 정리 결과를 따로 확인해야 한다.
       - name: Stop lab and revoke temporary runner ingress
         if: always()

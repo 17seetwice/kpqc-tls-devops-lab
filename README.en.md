@@ -63,7 +63,7 @@ Table ranges represent the minimum and maximum across configuration medians. [En
 
 OIDC supplies temporary AWS credentials; SSH executes EC2 commands. Pushing does not start EC2 instances.
 
-**The latest 63-assertion gate and the performance measurements above were run on AWS by a local controller.** The earlier [GitHub Actions run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618) covers the previous 32-assertion suite. A new remote CI run for this documentation revision has not yet been executed.
+**The latest 63-assertion gate and the performance measurements above were run on AWS by a local controller.** The earlier [GitHub Actions run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/35961683618) covers the previous 32-assertion suite. The revised documentation and gate implementation passed [remote CI](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36004626538), including policy, cleanup and Docker integration tests.
 
 ## 4. Reproduction and source layout
 
