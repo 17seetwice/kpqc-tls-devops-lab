@@ -1,5 +1,7 @@
 # KPQC TLS DevOps Lab
 
+**한국어** | [English](README.en.md)
+
 **새 버전 배포 시 PQC 암호 설정이 유지되는지 실제 TLS 연결로 검사하고, 정책을 위반한 후보의 배포를 차단하는 PoC입니다.**
 
 국산 양자내성암호를 OpenSSL에 통합한 [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3) 이미지를 사용합니다.
