@@ -1,6 +1,6 @@
 # 사용자가 KPQC를 포팅한 이미지를 digest로 고정해 기반 이미지의 변경을 방지한다.
 FROM dmfive/kpqc-ossl3@sha256:3a833a303e49a4edb1faa4c8f2b55d224786568600c6b001ed1e6f8ab4a30d3d
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 libxml2-utils gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 libxml2-utils gcc libc6-dev iproute2 ethtool && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY scripts /app/scripts
 COPY schemas /app/schemas

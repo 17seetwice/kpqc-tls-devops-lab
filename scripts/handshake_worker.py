@@ -50,7 +50,7 @@ def main(q):
         if q.get('warm'):
             env['KPQC_WARM']='1'
             prefix=OUT/tag
-            p=subprocess.run([BIN,'client',k,sigalg(s),str(STATE/f'{s}.crt'),'-',q['ip'],'4433',str(prefix),str(q['count']),q.get('host','kpqc-lab.internal')],capture_output=True,timeout=120,env=env)
+            p=subprocess.run([BIN,'client',q.get('client_kem',k),sigalg(s),str(STATE/f'{s}.crt'),'-',q['ip'],'4433',str(prefix),str(q['count']),q.get('host','kpqc-lab.internal')],capture_output=True,timeout=120,env=env)
             (OUT/f'{tag}.stderr').write_bytes(p.stderr)
             for i in range(q['count']):
                 row=json.loads((OUT/f'{tag}-{i:03d}.json').read_text());row['returncode']=p.returncode;rows.append(row)

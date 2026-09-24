@@ -62,7 +62,7 @@ def cleanup():
     if errors:
         raise RuntimeError('; '.join(errors))
 
-def deploy(image, extended=False):
+def deploy(image, extended=False, systems=False):
     # Secret에 등록한 서버·클라이언트 ID를 읽는다. 기존 프로젝트의 다른 인스턴스를 검색해 선택하지 않는다.
     ids = {r: os.environ['KPQC_'+r.upper()+'_INSTANCE_ID'] for r in ['server','client']}
     assert ids['server'] != ids['client']
@@ -130,6 +130,10 @@ def deploy(image, extended=False):
         subprocess.run(['python3','scripts/gate_suite.py','--server',nodes[ids['server']]['PublicIpAddress'],
                         '--client',nodes[ids['client']]['PublicIpAddress'], '--server-private',
                         nodes[ids['server']]['PrivateIpAddress'],'--image',image],check=True,cwd=ROOT)
+        if systems:
+            subprocess.run(['python3','scripts/systems_experiments.py','--server',nodes[ids['server']]['PublicIpAddress'],
+                            '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],
+                            '--image',image],check=True,cwd=ROOT,timeout=1800)
         if extended:
             subprocess.run(['python3','scripts/extended_handshake.py','--server',nodes[ids['server']]['PublicIpAddress'],
                             '--client',nodes[ids['client']]['PublicIpAddress'],'--server-private',nodes[ids['server']]['PrivateIpAddress'],
@@ -143,5 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--cleanup',action='store_true')
     parser.add_argument('--image',default='kpqc-lab:gate')
     parser.add_argument('--extended',action='store_true')
+    parser.add_argument('--systems',action='store_true')
     args = parser.parse_args()
-    cleanup() if args.cleanup else deploy(args.image,args.extended)
+    assert not (args.extended and args.systems), 'Run one follow-up suite at a time'
+    cleanup() if args.cleanup else deploy(args.image,args.extended,args.systems)

@@ -91,6 +91,9 @@ static long status_kib(const char *key){
 }
 static int reset_peak(void){int fd=open("/proc/self/clear_refs",O_WRONLY);if(fd<0)return 0;int ok=write(fd,"5",1)==1;close(fd);return ok;}
 static SSL_CTX *warm_context=NULL;
+static double attempt_ms=0;
+static long long mono_ns(void){struct timespec t;clock_gettime(CLOCK_MONOTONIC,&t);return (long long)t.tv_sec*1000000000+t.tv_nsec;}
+
 static int handshake(int fd,int server,const char *group,const char *sig,const char *cert,const char *key,const char *host,const char *output){
     SSL_CTX *c;
     if(getenv("KPQC_WARM")){
@@ -107,6 +110,10 @@ static int handshake(int fd,int server,const char *group,const char *sig,const c
      * 이 준비 신호는 TLS 표준 메시지가 아닌 실험 장치이므로 일반 HTTPS 클라이언트와 직접 호환되지 않는다.
      */
     char ready='R';
+    if(!server && getenv("KPQC_ROUTE")){
+        const char *route=getenv("KPQC_ROUTE");
+        if(send(fd,route,strlen(route),0)!=(ssize_t)strlen(route)||send(fd,"\n",1,0)!=1)die("route");
+    }
     if(server){if(send(fd,&ready,1,0)!=1)die("ready send");}
     else {if(recv(fd,&ready,1,MSG_WAITALL)!=1||ready!='R')die("ready receive");}
     /* CPU는 호출 전후 사용자/커널 시간의 차이로 측정한다. ru_maxrss는 프로세스 생애 최대 RSS이며 차분 메모리가 아니다.
@@ -138,11 +145,12 @@ static int handshake(int fd,int server,const char *group,const char *sig,const c
     if(peer && X509_digest(peer,EVP_sha256(),digest,&digest_len)==1 && digest_len==32)
         for(unsigned int i=0;i<digest_len;i++)snprintf(fingerprint+2*i,3,"%02x",digest[i]);
     const char *group_name=SSL_get0_group_name(s);
-    FILE *f=fopen(output,"w");if(!f)die("output");
-    fprintf(f,"{\"role\":\"%s\",\"success\":%s,\"handshake_ms\":%.6f,\"user_cpu_ms\":%.3f,\"system_cpu_ms\":%.3f,\"cpu_ms\":%.3f,\"process_peak_rss_kib_before\":%ld,\"process_peak_rss_kib_after\":%ld,\"group_code\":%u,\"signature_code\":%u,\"hello_retry_requests\":%u,\"handshake_messages\":%u,\"reused\":%s,\"verify_result\":%ld,\"ssl_error\":%d,\"peer_key_type\":\"%s\",\"tls_version\":\"%s\",\"cipher\":\"%s\"}\n",
+    struct tcp_info ti={0};socklen_t tilen=sizeof(ti);getsockopt(fd,IPPROTO_TCP,TCP_INFO,&ti,&tilen);
+    FILE *f=fopen(output,getenv("KPQC_JSONL")?"a":"w");if(!f)die("output");
+    fprintf(f,"{\"role\":\"%s\",\"success\":%s,\"handshake_ms\":%.6f,\"user_cpu_ms\":%.3f,\"system_cpu_ms\":%.3f,\"cpu_ms\":%.3f,\"process_peak_rss_kib_before\":%ld,\"process_peak_rss_kib_after\":%ld,\"group_code\":%u,\"signature_code\":%u,\"hello_retry_requests\":%u,\"handshake_messages\":%u,\"reused\":%s,\"verify_result\":%ld,\"ssl_error\":%d,\"peer_key_type\":\"%s\",\"tls_version\":\"%s\",\"cipher\":\"%s\"",
       server?"server":"client",rc==1?"true":"false",diff(a,b),tvms(after.ru_utime)-tvms(before.ru_utime),tvms(after.ru_stime)-tvms(before.ru_stime),tvms(after.ru_utime)+tvms(after.ru_stime)-tvms(before.ru_utime)-tvms(before.ru_stime),before.ru_maxrss,after.ru_maxrss,trace.group,trace.signature,trace.hrr,trace.messages,reused?"true":"false",verify,sslerr,keytype,SSL_get_version(s),SSL_get_cipher_name(s));
     /* Append metadata outside the measured interval. */
-    fseek(f,-2,SEEK_CUR);
+    fprintf(f,",\"tcp_snd_mss\":%u,\"tcp_rcv_mss\":%u,\"tcp_pmtu\":%u,\"tcp_rtt_us\":%u,\"completed_monotonic_ns\":%lld,\"tcp_ready_and_handshake_ms\":%.6f",ti.tcpi_snd_mss,ti.tcpi_rcv_mss,ti.tcpi_pmtu,ti.tcpi_rtt,(long long)b.tv_sec*1000000000+b.tv_nsec,attempt_ms>0?(b.tv_sec*1000.0+b.tv_nsec/1e6-attempt_ms):0);
     fprintf(f,",\"peer_certificate_sha256\":\"%s\",\"group_name\":\"%s\",\"sent_handshake_bytes\":%zu,\"received_handshake_bytes\":%zu,\"memory_mode\":%s,\"rss_peak_reset_ok\":%s,\"rss_before_kib\":%ld,\"rss_after_kib\":%ld,\"rss_window_baseline_kib\":%ld,\"rss_window_peak_kib\":%ld,\"rss_window_peak_growth_kib\":%ld,\"anon_before_kib\":%ld,\"anon_after_kib\":%ld}\n",fingerprint,group_name?group_name:"unknown",trace.sent_bytes,trace.received_bytes,memory?"true":"false",reset_ok?"true":"false",rss_before,rss_after,hwm_before,hwm_after,reset_ok?hwm_after-hwm_before:-1,anon_before,anon_after);
     fclose(f);
     if(rc!=1)ERR_print_errors_fp(stderr);
@@ -176,17 +184,43 @@ int main(int argc,char **argv){
      */
     if(!server){
         int count=atoi(argv[9]),failed=0;char output[1024];
+        int load=getenv("KPQC_LOAD_SECONDS")!=NULL;
+        long long deadline=0;
+        if(load){
+            setenv("KPQC_WARM","1",1);setenv("KPQC_JSONL","1",1);
+            warm_context=context(0,argv[2],argv[3],argv[4],argv[5]);
+            snprintf(output,sizeof(output),"%s.ready",argv[8]);FILE *rf=fopen(output,"w");if(!rf)die("client ready");fclose(rf);
+            while(access(getenv("KPQC_START_FILE"),F_OK))usleep(1000);
+            deadline=mono_ns()+(long long)(atof(getenv("KPQC_LOAD_SECONDS"))*1e9);
+        }
         for(int i=0;i<count;i++){
+            if(load && (mono_ns()>=deadline || (getenv("KPQC_STOP_FILE") && !access(getenv("KPQC_STOP_FILE"),F_OK))))break;
+            attempt_ms=mono_ns()/1e6;
             if(i){fd=socket(AF_INET,SOCK_STREAM,0);socket_options(fd);}
             if(connect(fd,(struct sockaddr*)&addr,sizeof(addr)))die("connect");
-            if(count>1)snprintf(output,sizeof(output),"%s-%03d.json",argv[8],i);else snprintf(output,sizeof(output),"%s",argv[8]);
+            if(load)snprintf(output,sizeof(output),"%s.jsonl",argv[8]);else if(count>1)snprintf(output,sizeof(output),"%s-%03d.json",argv[8],i);else snprintf(output,sizeof(output),"%s",argv[8]);
             failed+=handshake(fd,0,argv[2],argv[3],argv[4],argv[5],argv[10],output)!=0;
         }
         return failed?1:0;
     }
     int one=1;setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&one,sizeof(one));
-    if(bind(fd,(struct sockaddr*)&addr,sizeof(addr))||listen(fd,8))die("listen");
+    if(bind(fd,(struct sockaddr*)&addr,sizeof(addr))||listen(fd,256))die("listen");
     char name[1024];snprintf(name,sizeof(name),"%s.ready",argv[8]);FILE *r=fopen(name,"w");if(!r)die("ready file");fputs("ready",r);fclose(r);
+    /* Opt-in prefork service: each worker reuses its own context, no shared SSL object. */
+    if(getenv("KPQC_SERVER_WORKERS")){
+        int workers=atoi(getenv("KPQC_SERVER_WORKERS"));if(workers<1||workers>64)die("worker count");
+        for(int w=0;w<workers;w++){
+            pid_t child=fork();if(child<0)die("worker fork");
+            if(!child){
+                setenv("KPQC_WARM","1",1);setenv("KPQC_JSONL","1",1);
+                warm_context=context(1,argv[2],argv[3],argv[4],argv[5]);
+                snprintf(name,sizeof(name),"%s-worker-%d.jsonl",argv[8],w);
+                while(1){int conn=accept(fd,NULL,NULL);if(conn<0)die("worker accept");socket_options(conn);
+                    handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name);}
+            }
+        }
+        while(wait(NULL)>0){}close(fd);return 0;
+    }
     int failed=0,count=atoi(argv[9]);
     for(int i=0;i<count;i++){
         int conn=accept(fd,NULL,NULL);if(conn<0)die("accept");socket_options(conn);
