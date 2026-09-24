@@ -1,0 +1,8 @@
+*
+!Dockerfile
+!scripts/
+!scripts/**
+!schemas/
+!schemas/**
+!policies/
+!policies/**

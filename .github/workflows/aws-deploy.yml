@@ -1,0 +1,59 @@
+name: AWS PQC deployment gates
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kpqc-aws-lab
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.repository == '17seetwice/kpqc-tls-devops-lab' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      KPQC_SERVER_INSTANCE_ID: ${{ secrets.KPQC_SERVER_INSTANCE_ID }}
+      KPQC_CLIENT_INSTANCE_ID: ${{ secrets.KPQC_CLIENT_INSTANCE_ID }}
+      KPQC_SERVER_SG_ID: ${{ secrets.KPQC_SERVER_SG_ID }}
+      KPQC_CLIENT_SG_ID: ${{ secrets.KPQC_CLIENT_SG_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build candidate and verify locally
+        run: |
+          docker build -f Dockerfile.gate -t kpqc-lab:gate .
+          mkdir -p artifacts
+          docker run --rm --network none --cpus 2 --memory 512m --tmpfs /state:size=64m -v "$PWD/artifacts:/results-root" --entrypoint python3 kpqc-lab:gate /app/scripts/gate_suite.py --local
+      - name: Obtain short-lived AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.KPQC_AWS_ROLE_ARN }}
+          aws-region: ap-northeast-2
+          role-session-name: kpqc-${{ github.run_id }}
+      - name: Install SSH credentials and pinned host keys
+        env:
+          SSH_KEY: ${{ secrets.KPQC_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.KPQC_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p .aws-runtime
+          printf '%s\n' "$SSH_KEY" > kpqc-devops-lab.pem
+          printf '%s\n' "$KNOWN_HOSTS" > .aws-runtime/known_hosts
+      - name: Deploy exact tested image and exercise approval and rejection
+        run: python3 scripts/ci_deploy.py
+      - name: Stop lab and revoke temporary runner ingress
+        if: always()
+        run: python3 scripts/ci_deploy.py --cleanup
+      - name: Prepare public experiment evidence
+        if: always()
+        run: |
+          sudo chmod -R a+rX artifacts
+          python3 scripts/ci_evidence.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployment-evidence-${{ github.run_id }}
+          path: public-evidence/
+          retention-days: 14

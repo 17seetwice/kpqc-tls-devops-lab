@@ -1,0 +1,9 @@
+{
+  "message": "camt.053.001.08",
+  "publisher": "Rabobank official downloads",
+  "catalogue": "https://www.rabobank.com/products/manage-my-trade-and-cash/transaction-banking/swift-for-corporates/Downloads",
+  "download": "https://media.rabobank.com/asset/562d03a8-a703-4a19-abfe-e7692a5ae22f/camt-053-001-08-2019.xsd",
+  "retrieved": "2026-09-23",
+  "sha256": "338e9cb0c9989b5181802a7b773eece070d6815fc9d6483ac0579117bc24ccba",
+  "note": "Unmodified schema. Synthetic XML uses proprietary LAB transaction codes. XSD validation does not imply full Rabobank usage-guideline compliance. ISO catalogue V14 download returned HTTP 403; V08 was chosen from this bank's public distribution."
+}

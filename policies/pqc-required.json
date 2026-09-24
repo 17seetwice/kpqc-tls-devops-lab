@@ -1,0 +1,12 @@
+{
+  "version": "pqc-required-v1",
+  "tls_version": "TLSv1.3",
+  "kem": "smaug1",
+  "group_code": 65056,
+  "tls_signature": "haetae2",
+  "signature_code": 65408,
+  "cipher": "TLS_AES_256_GCM_SHA384",
+  "require_certificate_verification": true,
+  "allow_classical_fallback": false,
+  "required_clients": ["pqc"]
+}

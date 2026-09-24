@@ -1,0 +1,36 @@
+name: KPQC migration experiment
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-lab:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify published schema checksum
+        run: python3 -c 'import hashlib,json,pathlib; p=pathlib.Path("schemas"); s=json.loads((p/"source.json").read_text()); assert hashlib.sha256((p/"camt.053.001.08.xsd").read_bytes()).hexdigest()==s["sha256"]'
+      - name: Build lab
+        run: docker compose build
+      - name: Execute verification and rollout gates
+        run: |
+          mkdir -p artifacts
+          docker compose run --rm lab
+      - name: Build deployment gate lab
+        run: docker compose -f compose.gate.yaml build
+      - name: Verify candidate approval and rejection
+        run: docker compose -f compose.gate.yaml run --rm gate
+      - name: Make container results readable by artifact uploader
+        if: always()
+        run: |
+          sudo chmod -R a+rX artifacts
+          python3 scripts/ci_evidence.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: kpqc-experiment-results
+          path: public-evidence/
+          retention-days: 14

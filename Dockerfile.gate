@@ -1,0 +1,8 @@
+FROM dmfive/kpqc-ossl3@sha256:3a833a303e49a4edb1faa4c8f2b55d224786568600c6b001ed1e6f8ab4a30d3d
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 libxml2-utils gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY scripts /app/scripts
+COPY schemas /app/schemas
+COPY policies /app/policies
+RUN gcc -O2 -Wall -Wextra -I/opt/openssl-3.4.4/include /app/scripts/tls_handshake.c -L/opt/openssl-3.4.4/lib -Wl,-rpath,/opt/openssl-3.4.4/lib -lssl -lcrypto -o /app/tls_handshake
+ENTRYPOINT ["sleep", "infinity"]

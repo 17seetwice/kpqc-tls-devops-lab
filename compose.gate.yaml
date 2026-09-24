@@ -1,0 +1,14 @@
+services:
+  gate:
+    build:
+      context: .
+      dockerfile: Dockerfile.gate
+    platform: linux/amd64
+    network_mode: none
+    cpus: 2
+    mem_limit: 512m
+    tmpfs:
+      - /state:size=64m
+    volumes:
+      - ./artifacts:/results-root
+    entrypoint: ["python3", "/app/scripts/gate_suite.py", "--local"]

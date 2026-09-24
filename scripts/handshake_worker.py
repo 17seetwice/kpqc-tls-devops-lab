@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Fresh-process, TLS-only workers. Setup/readiness preface is outside timer."""
+import hashlib,json,os,signal,subprocess,sys,time
+from pathlib import Path
+import aws_worker
+
+STATE=Path('/state'); OUT=Path('/results'); BIN='/app/tls_handshake'
+SIGS=['EC','haetae2','haetae3','haetae5','aimer128f','aimer192f','aimer256f']
+CODES=aws_worker.CODES
+def run(args):return subprocess.run(list(map(str,args)),capture_output=True,check=True,timeout=60)
+def sigalg(s):return 'ecdsa_secp256r1_sha256' if s=='EC' else s
+def main(q):
+    STATE.mkdir(exist_ok=True);OUT.mkdir(exist_ok=True)
+    action=q['action']
+    if action=='init-server':
+        trust={}
+        for s in SIGS:
+            args=['openssl','req','-provider','default','-provider','oqsprovider','-x509','-newkey']
+            args+=['ec','-pkeyopt','ec_paramgen_curve:P-256'] if s=='EC' else [s]
+            args+=['-nodes','-keyout',STATE/f'{s}.key','-out',STATE/f'{s}.crt','-days','1','-subj','/CN=kpqc-lab.internal','-addext','subjectAltName=DNS:kpqc-lab.internal']
+            run(args);trust[s]=(STATE/f'{s}.crt').read_text()
+        (OUT/'public-trust.json').write_text(json.dumps(trust,indent=2))
+        return {'trust':trust,'environment':aws_worker.environment()}
+    if action=='init-client':
+        for s,pem in q['trust'].items():
+            assert s in SIGS;(STATE/f'{s}.crt').write_text(pem)
+        return {'environment':aws_worker.environment()}
+    if action=='start':
+        k,s=q['kem'],q['signature'];assert k in CODES and s in SIGS
+        tag=q['tag'];assert tag.replace('-','').replace('_','').isalnum()
+        output=OUT/tag;log=open(OUT/f'{tag}.stderr','wb')
+        args=[BIN,'server',k,sigalg(s),str(STATE/f'{s}.crt'),str(STATE/f'{s}.key'),'0.0.0.0','4433',str(output),str(q['count']),'kpqc-lab.internal']
+        p=subprocess.Popen(args,stdout=log,stderr=log,start_new_session=True);log.close()
+        (STATE/'pending.json').write_text(json.dumps({'tag':tag,'pid':p.pid,'count':q['count']}))
+        for _ in range(200):
+            if Path(str(output)+'.ready').exists():return {'ready':True}
+            assert p.poll() is None,'server exited';time.sleep(.01)
+        raise RuntimeError('server readiness timeout')
+    if action=='clients':
+        k,s=q['kem'],q['signature'];tag=q['tag'];rows=[]
+        for i in range(q['count']):
+            path=OUT/f'{tag}-{i:03d}.json'
+            p=subprocess.run([BIN,'client',q.get('client_kem',k),sigalg(q.get('client_signature',s)),str(STATE/f'{q.get("trust_signature",s)}.crt'),'-',q['ip'],'4433',str(path),'1',q.get('host','kpqc-lab.internal')],capture_output=True,timeout=25)
+            (OUT/f'{tag}-{i:03d}.stderr').write_bytes(p.stderr)
+            assert path.exists(),p.stderr.decode()
+            row=json.loads(path.read_text());row['returncode']=p.returncode
+            rows.append(row)
+        return {'rows':rows}
+    if action=='collect':
+        pending=json.loads((STATE/'pending.json').read_text());assert pending['tag']==q['tag']
+        paths=[OUT/f'{pending["tag"]}-{i:03d}.json' for i in range(pending['count'])]
+        for _ in range(500):
+            if all(p.exists() for p in paths):
+                try:rows=[json.loads(p.read_text()) for p in paths];break
+                except json.JSONDecodeError:pass
+            time.sleep(.01)
+        else:raise RuntimeError('server results timeout')
+        # Wait for listen socket to close before the next profile binds.
+        for _ in range(500):
+            if not any(r.split()[1]=='00000000:1151' and r.split()[3]=='0A' for r in Path('/proc/net/tcp').read_text().splitlines()[1:]):break
+            time.sleep(.01)
+        else:raise RuntimeError('server still listening')
+        (STATE/'pending.json').unlink();return {'rows':rows}
+    if action=='cleanup':
+        p=STATE/'pending.json'
+        if p.exists():
+            try:os.killpg(json.loads(p.read_text())['pid'],signal.SIGTERM)
+            except ProcessLookupError:pass
+            p.unlink()
+        return {'cleaned':True}
+    raise ValueError(action)
+if __name__=='__main__':print(json.dumps(main(json.load(sys.stdin))))
