@@ -16,6 +16,8 @@ jobs:
         run: python3 scripts/test_gate_policy.py
       - name: Verify EC2 cleanup failure paths
         run: python3 scripts/test_ci_deploy.py
+      - name: Verify performance admission failure paths
+        run: python3 scripts/test_release_policy.py
       # 합성 금융 XML의 형식 기준인 공개 스키마가 기록한 원본 해시와 같은지 확인한다.
       - name: Verify published schema checksum
         run: python3 -c 'import hashlib,json,pathlib; p=pathlib.Path("schemas"); s=json.loads((p/"source.json").read_text()); assert hashlib.sha256((p/"camt.053.001.08.xsd").read_bytes()).hexdigest()==s["sha256"]'

@@ -56,6 +56,24 @@ for path in sorted((root/'artifacts').glob('*-systems-*/results.json')):
     public['cleanup_ok']=not data.get('cleanup_errors')
     (out/(path.parent.name+'.json')).write_text(json.dumps(public,indent=2))
     summary['systems_experiments'].append({'run_id':data['run_id'],'status':data['status'],'cleanup_ok':public['cleanup_ok']})
+# Release lifecycle rows contain only observations; transport diagnostics stay private.
+summary['release_experiments'] = []
+def release_clean(value):
+    if isinstance(value,list):return [release_clean(x) for x in value]
+    if isinstance(value,dict):return {k:release_clean(v) for k,v in value.items() if k not in ['transport_errors','environment']}
+    return value
+for path in sorted((root/'artifacts').glob('*-release-*/results.json')):
+    data=json.loads(path.read_text())
+    keys=['run_id','status','smoke','source_commit','image_identity','started_at','ended_at','assertions',
+          'policy','policy_sha256','certificate_sha256','legacy_baseline','idle_health','idle_workers','candidates',
+          'classical_rollback_rejection','before_fault','wrong_rollback_health','stale_rollback_health','fault','health_checks','detection_ms','rollback_health',
+          'rollback','recovered_health','recovery_ms','recovery_traffic','post_recovery_probes','post_recovery_decision']
+    public=release_clean({k:data[k] for k in keys if k in data})
+    import hashlib
+    public['source_results_sha256']=hashlib.sha256(path.read_bytes()).hexdigest()
+    public['cleanup_ok']=not data.get('cleanup_errors')
+    (out/(path.parent.name+'.json')).write_text(json.dumps(public,indent=2))
+    summary['release_experiments'].append({'run_id':data['run_id'],'status':data['status'],'cleanup_ok':public['cleanup_ok']})
 # 이미지 식별자·커밋·정리 성공 여부를 남겨 어떤 코드와 이미지로 실행했는지 추적한다.
 state = root/'.aws-runtime/ci-state.json'
 if state.exists():

@@ -30,6 +30,7 @@ def wait_listen(port):
 # 인증서·키·KEM·서명 파라미터를 지정해 C TLS 서버를 실행하고 listen 준비를 기다린다.
 def launch(name,group,sig,port):
     env=dict(os.environ)
+    if name=='slow-v2':env['KPQC_TEST_ACCEPT_DELAY_MS']='350'
     if name=="mixed-signature":env.update(KPQC_EXTRA_CERT=str(STATE/"wrong-signature.crt"),KPQC_EXTRA_KEY=str(STATE/"wrong-signature.key"))
     prefix=OUT/name;log=open(OUT/f'{name}.stderr','wb')
     p=subprocess.Popen([BIN,'server',group,handshake_worker.sigalg(sig),str(STATE/f'{name}.crt'),str(STATE/f'{name}.key'),'127.0.0.1',str(port),str(prefix),'10000','kpqc-lab.internal'],stdout=log,stderr=log,start_new_session=True,env=env);log.close()
@@ -60,7 +61,7 @@ def router():
                 if not b:raise ValueError('missing selector')
                 label+=b
             # TLS 전에 보낸 실험용 평문 선택자를 소비한 뒤 TLS 바이트만 대상 서버에 중계한다.
-            kind=label.strip().decode();assert kind in ['active','candidate']
+            kind=label.strip().decode();assert kind in ['active','candidate','rollback']
             state=read(STATE/'route.json');target=state[kind];assert target
             up=socket.create_connection(('127.0.0.1',target['port']),timeout=5)
             with open(OUT/'router.jsonl','a') as f:f.write(json.dumps({'time_ns':time.time_ns(),'route':kind,'version':target['version'],'port':target['port']})+'\n')
@@ -117,7 +118,8 @@ def main(q):
     # 기존 서비스와 후보의 인증서를 따로 만든다. 자체 서명 인증서를 명시적으로 신뢰하는 실험 PKI다.
     if action=='init-server':
         trust={}
-        for name,sig in [('active-v1','haetae2'),('good-v2','haetae2'),('good-v3','haetae2'),('mixed-kem','haetae2'),('mixed-signature','haetae2'),('wrong-kem','haetae2'),('wrong-signature','EC')]:
+        initial_legacy=q.get('initial_legacy',False)
+        for name,sig in [('active-v1','EC' if initial_legacy else 'haetae2'),('good-v2','haetae2'),('good-v3','haetae2'),('slow-v2','haetae2'),('mixed-kem','haetae2'),('mixed-signature','haetae2'),('wrong-kem','haetae2'),('wrong-signature','EC')]:
             args=['openssl','req','-provider','default','-provider','oqsprovider','-x509','-newkey']
             args+=['ec','-pkeyopt','ec_paramgen_curve:P-256'] if sig=='EC' else [sig]
             # Distinct self-signed issuers avoid ambiguous trust-anchor lookup.
@@ -125,7 +127,7 @@ def main(q):
             # SAN은 모두 같은 서비스 이름으로 유지하고 CN은 구분해 자체 서명 신뢰 앵커 선택 충돌을 피한다.
             args+=['-nodes','-keyout',str(STATE/f'{name}.key'),'-out',str(STATE/f'{name}.crt'),'-days','1','-subj',f'/CN={name}','-addext','subjectAltName=DNS:kpqc-lab.internal']
             subprocess.run(args,capture_output=True,check=True,timeout=60);trust[name]=(STATE/f'{name}.crt').read_text()
-        pid=launch('active-v1','smaug1','haetae2',24430)
+        pid=launch('active-v1','X25519' if initial_legacy else 'smaug1','EC' if initial_legacy else 'haetae2',24430)
         save(STATE/'processes.json',{'active':pid});save(STATE/'route.json',{'active':{'version':'active-v1','port':24430},'candidate':None})
         log=open(OUT/'router.stderr','wb');p=subprocess.Popen([sys.executable,__file__,'router'],stdout=log,stderr=log,start_new_session=True);log.close()
         procs=read(STATE/'processes.json');procs['router']=p.pid;save(STATE/'processes.json',procs)
@@ -164,7 +166,7 @@ def main(q):
             stop(procs.pop('candidate'));wait_listen(state['candidate']['port'])
         state['candidate']=None;save(STATE/'route.json',state)
         name=q['name']
-        group,sig={'wrong-kem':('X25519','haetae2'),'wrong-signature':('smaug1','EC'),'good-v2':('smaug1','haetae2'),'good-v3':('smaug1','haetae2'),'mixed-kem':('smaug1:X25519','haetae2'),'mixed-signature':('smaug1','haetae2:ecdsa_secp256r1_sha256')}[name]
+        group,sig={'wrong-kem':('X25519','haetae2'),'wrong-signature':('smaug1','EC'),'good-v2':('smaug1','haetae2'),'good-v3':('smaug1','haetae2'),'slow-v2':('smaug1','haetae2'),'mixed-kem':('smaug1:X25519','haetae2'),'mixed-signature':('smaug1','haetae2:ecdsa_secp256r1_sha256')}[name]
         Path(str(OUT/name)+'.ready').unlink(missing_ok=True)
         # Retired listeners remain until cleanup; use a fresh port for each candidate.
         port=state.get('next_port',24431);state['next_port']=port+1

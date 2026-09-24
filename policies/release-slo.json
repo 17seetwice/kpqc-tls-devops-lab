@@ -1,0 +1,18 @@
+{
+  "version": "lab-release-slo-v1",
+  "scope": "Synthetic lab service target, not a financial regulation or capacity claim",
+  "arrival_rate_per_second": 10,
+  "window_seconds": 10,
+  "required_windows": 3,
+  "max_attempt_failure_fraction": 0.01,
+  "max_p95_admission_ms": 200,
+  "min_on_time_completion_fraction": 0.99,
+  "max_p95_generator_lateness_ms": 50,
+  "attempt_timeout_seconds": 2,
+  "max_evidence_age_seconds": 300,
+  "fault_accept_delay_ms": 350,
+  "health_interval_seconds": 0.25,
+  "consecutive_failures_to_rollback": 2,
+  "recovery_objective_seconds": 10,
+  "allow_classical_rollback": false
+}

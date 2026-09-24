@@ -3,6 +3,10 @@ name: AWS PQC deployment gates
 on:
   workflow_dispatch:
     inputs:
+      release_lifecycle:
+        description: Validate classical-to-KPQC migration, performance admission and automatic PQC recovery
+        type: boolean
+        default: false
       balanced_latency:
         description: Run ten balanced cold/warm latency blocks after deployment gates
         type: boolean
@@ -31,6 +35,7 @@ jobs:
       # GitHub OIDC 토큰으로 AWS 전용 역할의 단기 인증을 받는다. 영구 AWS 키를 사용하지 않는다.
       id-token: write
     env:
+      KPQC_RELEASE: ${{ inputs.release_lifecycle && '1' || '0' }}
       KPQC_ROLLOUT_ONLY: ${{ inputs.rollout_only && '1' || '0' }}
       KPQC_SYSTEMS: ${{ inputs.systems_experiments && '1' || '0' }}
       KPQC_BALANCED_LATENCY: ${{ inputs.balanced_latency && '1' || '0' }}
@@ -44,6 +49,8 @@ jobs:
         run: python3 scripts/test_gate_policy.py
       - name: Verify EC2 cleanup failure paths
         run: python3 scripts/test_ci_deploy.py
+      - name: Verify performance admission failure paths
+        run: python3 scripts/test_release_policy.py
       # 여기서 locally는 내 PC가 아니라 GitHub runner 안의 Docker 시험을 의미한다.
       - name: Build candidate and verify locally
         run: |
@@ -59,6 +66,12 @@ jobs:
           test "$KPQC_BALANCED_LATENCY" = "0"
           sudo modprobe sch_netem
           python3 scripts/systems_experiments.py --local --smoke --image kpqc-lab:gate
+      - name: Verify migration and automatic recovery locally
+        if: inputs.release_lifecycle
+        run: |
+          test "$KPQC_BALANCED_LATENCY" = "0"
+          test "$KPQC_SYSTEMS" = "0"
+          python3 scripts/release_experiments.py --local --image kpqc-lab:gate
       - name: Obtain short-lived AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -78,7 +91,9 @@ jobs:
       # ci_deploy가 EC2와 이미지 전달을 관리하고 gate_suite가 실제 TLS 후보 판정·전환을 수행한다.
       - name: Deploy exact tested image and exercise approval and rejection
         run: |
-          if [ "$KPQC_SYSTEMS" = "1" ]; then
+          if [ "$KPQC_RELEASE" = "1" ]; then
+            python3 scripts/ci_deploy.py --release
+          elif [ "$KPQC_SYSTEMS" = "1" ]; then
             python3 scripts/ci_deploy.py --systems
           elif [ "$KPQC_BALANCED_LATENCY" = "1" ]; then
             python3 scripts/ci_deploy.py --extended

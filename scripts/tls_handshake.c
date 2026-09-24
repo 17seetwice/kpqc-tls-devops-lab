@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <string.h>
+#include <errno.h>
 
 /* Timing boundary: ONE blocking SSL_connect/SSL_accept call, after all setup.
  * A one-byte plaintext readiness preface precedes TLS and is excluded from
@@ -122,6 +123,9 @@ static int handshake(int fd,int server,const char *group,const char *sig,const c
     int memory=getenv("KPQC_MEMORY")!=NULL,reset_ok=0;
     long rss_before=-1,anon_before=-1,hwm_before=-1,hwm_after=-1,rss_after=-1,anon_after=-1;
     if(memory){rss_before=status_kib("VmRSS:");anon_before=status_kib("RssAnon:");reset_ok=reset_peak();hwm_before=status_kib("VmHWM:");}
+    /* Lab-only service stall precedes SSL_accept; the client waits inside SSL_connect. */
+    if(server && getenv("KPQC_TEST_ACCEPT_DELAY_MS"))
+        usleep((useconds_t)atoi(getenv("KPQC_TEST_ACCEPT_DELAY_MS"))*1000);
     struct rusage before,after;struct timespec a,b;
     if(getrusage(RUSAGE_SELF,&before))die("getrusage");
     /* 측정 시작: TCP 연결·인증서 준비·위 준비 신호는 이미 끝났다. 시스템 시각 보정의 영향을 피하는 단조 시계를 사용한다.
@@ -215,7 +219,10 @@ int main(int argc,char **argv){
                 setenv("KPQC_WARM","1",1);setenv("KPQC_JSONL","1",1);
                 warm_context=context(1,argv[2],argv[3],argv[4],argv[5]);
                 snprintf(name,sizeof(name),"%s-worker-%d.jsonl",argv[8],w);
-                while(1){int conn=accept(fd,NULL,NULL);if(conn<0)die("worker accept");socket_options(conn);
+                while(1){int conn=accept(fd,NULL,NULL);
+                    /* An idle listener's receive timeout is not a service failure. */
+                    if(conn<0){if(errno==EINTR||errno==EAGAIN||errno==EWOULDBLOCK||errno==ECONNABORTED)continue;die("worker accept");}
+                    socket_options(conn);
                     handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name);}
             }
         }
