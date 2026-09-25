@@ -97,9 +97,9 @@ PYCODE
 
 현재 정상 종료 기준은 `status: passed`, `checks: 63 / 63`, `cleanup_errors: []`입니다.
 
-### 5. 핸드셰이크 측정도 실행하기
+### 5. 독립 TLS 성능 측정 실행하기
 
-게이트 시험 후 다음 명령으로 대표 3개 구성의 짧은 핸드셰이크 측정을 실행할 수 있습니다. 같은 이미지를 사용하며 새 프로세스·재사용 조건을 시험합니다.
+이 명령은 배포 게이트와 별개인 성능 벤치마크입니다. 게이트 시험 후 대표 3개 구성의 짧은 핸드셰이크 측정을 실행할 수 있습니다. 같은 이미지를 사용하며 새 프로세스·재사용 조건을 시험합니다.
 
 ```sh
 docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scripts/extended_handshake.py --local --balanced --smoke
@@ -117,41 +117,27 @@ docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scri
 
 다른 계정으로 fork한 경우 [워크플로](.github/workflows/aws-deploy.yml)의 저장소 제한(`github.repository`)과 AWS 역할의 신뢰 조건을 본인 저장소에 맞춰야 합니다. 로컬 빠른 시작은 이 설정 없이 실행할 수 있습니다. AWS 실행 후에는 정리 기록의 `cleanup_complete`와 EC2 중지 상태를 확인하세요.
 
-## 검증 목표와 실험 구성
+## 실험 구성
 
-KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배포 승인과 장애 복구를 검증했습니다.
+이 저장소는 서로 다른 두 가지 작업을 담습니다. 첫째는 KPQC TLS의 성능·네트워크 특성을 관측하는 실험입니다. 둘째는 관측 결과와 암호 정책을 배포 승인·복구에 사용하는 DevOps 실험입니다. TLS 성능·네트워크 벤치마크는 배포 파이프라인과 독립적으로 수행했습니다. 배포 승인은 별도의 후보 시험에서 고정 도착률 부하와 사전 설정한 SLO (Service Level Objective)를 적용합니다. 따라서 벤치마크 수치 자체가 배포 승인 입력은 아닙니다.
 
-### 1. 핸드셰이크 비용
+### TLS 성능·네트워크 특성 측정
 
-- 방법: 42개 KPQC 조합과 고전 기준선 비교. 지연·CPU·메시지 크기 계측, 메모리 별도 측정.
-- 결과: 초기 지연 1,290회·메모리 129회, 실행 순서 균형화 후속 지연 2,580회 분석. [구성별 결과](experiments/process-reuse/README.md)
+이 항목은 TLS의 동작 시간과 자원·네트워크 영향을 측정하는 독립 벤치마크입니다.
 
-### 2. 네트워크·동시 접속
+- 42개 KPQC 조합과 고전 기준선의 지연·CPU·메시지 크기를 비교하고 별도 실행에서 메모리를 측정했습니다. 초기 실행은 지연 1,290회·메모리 129회, 후속 순서 비교 실행은 지연 2,580회를 분석했습니다. [측정 방법과 결과](experiments/process-reuse/README.md)
+- 대표 5개 조합에서 MTU·추가 지연·HRR·동시 접속 수에 따른 차이를 측정했습니다. 동시 부하 시험에서 273,091회 연결을 검증했습니다. [네트워크·처리량 결과](experiments/network-and-load/README.md)
 
-- 방법: 대표 5개 구성에서 MTU·추가 지연·HRR·동시 접속 수를 변경.
-- 결과: 추가 왕복 지연 30ms에서 HRR 비용 약 31ms 관측. 동시 부하 273,091회 연결 검증. [네트워크·처리량 결과](experiments/network-and-load/README.md)
+### 정책 기반 배포·복구 실험
 
-### 3. 암호 정책 게이트
+이 항목은 실제 연결 검사와 성능 기준을 배포 결정에 연결하고, 자동화된 전환·복구 절차를 확인합니다.
 
-- 방법: 승인된 TLS 1.3·SMAUG1·HAETAE2 연결은 허용하고 고전 암호·TLS 1.2 접속은 거절하는지 검사.
-- 결과: KPQC 접속이 성공해도 X25519 접속까지 허용하는 후보는 차단. 증적 검사 등을 포함한 63개 검증 항목 통과.
+- 암호 정책 게이트: TLS 1.3·SMAUG1·HAETAE2 연결은 허용하고 고전 암호 또는 TLS 1.2만 사용하는 접속은 거절하는지 검사했습니다. KPQC 연결이 성공해도 X25519 접속까지 허용하는 후보는 거절했습니다. 증적 검사 등을 포함한 63개 검증 항목을 통과했습니다.
+- 성능 승인: 후보별 초당 10회씩 10초 × 3구간 동안 실패율·200ms 내 성공률·p95·부하 생성 지연을 검사했습니다. 정상 후보 두 개는 승인하고, 350ms 지연 주입 후보는 암호 검사를 통과했지만 성능 기준 위반으로 거절했습니다. 각 후보에서 TLS 연결 300회가 성공했습니다.
+- 부하 중 전환·장애 복구: 전환 재시험에서 24,504회 중 실패 0회였습니다. 별도 프로세스 장애 시험에서는 2.951초 후 복구를 확인했으며, 장애 구간 150회 중 21회는 실패했습니다.
+- 실행 자동화: GitHub Actions가 빌드·시험·AWS 실행·증적 저장·정리를 연결했습니다. 최종 실행에서 암호 정책 63개 및 전환·성능 승인·복구 24개 항목을 통과했고, EC2 중지와 임시 SSH 규칙 제거를 확인했습니다. [실행 기록](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
 
-### 4. 성능 기반 배포 승인
-
-- 방법: 후보별 10회/초 × 10초 × 3구간. 실패율·200ms 내 성공률·p95·부하 생성 지연 검사.
-- 결과: 정상 두 후보 승인, 350ms 지연 후보 거절. 세 후보 모두 TLS 연결은 각각 300회 성공. [승인 기준과 결과](experiments/deployment-recovery/README.md)
-
-### 5. 전환·장애 복구
-
-- 방법: 부하 중 경로 전환과 서버 프로세스 중단을 별도 시험. 이전 승인 KPQC 서비스의 상태를 재확인하고 복구.
-- 결과: 전환 재시험 24,504회 중 실패 0회. 별도 장애 시험은 복구 2.951초, 150회 중 실패 21회.
-
-### 6. 실행 자동화·증적
-
-- 방법: GitHub Actions에서 빌드 → 시험 → AWS 배포 → 결과 저장 → 자원 정리.
-- 결과: 최종 실행에서 암호 정책 63개·전환 및 복구 등 24개 검증 통과. EC2 중지와 임시 SSH 규칙 제거 확인. [실행 기록](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
-
-각 수치는 해당 실행의 조건에 한정하며 서로 다른 실행의 결과를 합산하지 않습니다. 설계 이유와 세부 과정은 [전체 실험 설명](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) · [HTML 자료](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html)를 참고하세요.
+실험별 수치는 실행 조건마다 따로 집계했으며 서로 다른 실행 결과를 합산하지 않습니다. 설계 배경과 상세 절차는 [전체 실험 설명](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md)과 [HTML 자료](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html)에 있습니다.
 
 ## 실험 환경과 측정 범위
 
@@ -159,7 +145,7 @@ KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배�
 
 | 실험 | 네트워크 조건 | 암호 구성 |
 |---|---|---|
-| 초기·실행 순서 균형화 측정 | Docker host network, 인터페이스 MTU 9001 | SMAUG 1/3/5·NTRU+ 576/768/864/1152 × HAETAE 2/3/5·AIMer 128f/192f/256f 및 고전 기준선 |
+| TLS 성능: 프로세스 초기화·설정 재사용 조건 비교 | Docker host network, 인터페이스 MTU 9001 | SMAUG 1/3/5·NTRU+ 576/768/864/1152 × HAETAE 2/3/5·AIMer 128f/192f/256f 및 고전 기준선 |
 | 네트워크·동시 부하 | Docker bridge, MTU 1500/9001 비교; 세부 조건은 개별 보고서 참조 | 고전 기준선 및 {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f} |
 | 성능 승인·장애 복구 | Docker bridge, MTU 1500 | 기존 X25519 + ECDSA P-256에서 SMAUG1 + HAETAE2로 전환 |
 
@@ -174,7 +160,9 @@ KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배�
 
 인증은 자체 서명 서버 인증서를 클라이언트에 사전 등록하고 이름을 검증하는 방식입니다. 서버 인증만 수행하며 mTLS (Mutual TLS)는 사용하지 않습니다. 시험용 준비 신호와 배포 경로 선택은 TLS 호출 밖에서 처리합니다. 해당 접속 절차와 커스텀 TLS 식별자는 동일 이미지의 시험 프로그램 간 사용을 전제로 합니다.
 
-## TLS 핸드셰이크 성능
+## TLS 성능 측정 결과
+
+다음 결과는 배포 승인·복구 실험과 별도로 수행한 TLS 벤치마크에서 얻었습니다.
 
 실행 순서를 균형화한 후속 측정은 43개 구성 × 2개 조건 × 30회로 총 2,580회를 분석했습니다. 준비·감시 연결은 분석에서 제외했습니다.
 
@@ -246,7 +234,7 @@ kpqc-tls-devops-lab/
 │   └── release-slo.json             # 성능·복구 목표
 ├── experiments/                    # 공개 실험 보고서·원자료·그림
 │   ├── data/                        # 초기 측정·암호 게이트 기록
-│   ├── process-reuse/                    # 프로세스 재사용 여부 비교 결과
+│   ├── process-reuse/                    # 프로세스 초기화·설정 재사용 결과
 │   ├── network-and-load/                     # 네트워크·부하·전환 결과
 │   └── deployment-recovery/                     # 성능 승인·장애 복구 결과
 ├── docs/                            # 설정 가이드·실험 설명
@@ -263,7 +251,7 @@ kpqc-tls-devops-lab/
 | 실험 | 문서 |
 |---|---|
 | 43개 암호 구성의 핸드셰이크·CPU·메모리 측정 | [환경](experiments/01_environment.md) · [방법](experiments/02_methods.md) · [결과](experiments/03_results.md) |
-| 프로세스 재사용 여부에 따른 TLS 지연 비교 | [한국어](experiments/process-reuse/README.md) · [English](experiments/process-reuse/README.en.md) |
+| TLS 핸드셰이크 성능 측정: 프로세스 초기화와 설정 재사용 | [한국어](experiments/process-reuse/README.md) · [English](experiments/process-reuse/README.en.md) |
 | MTU·네트워크 지연·HelloRetryRequest·동시 부하·부하 중 배포 | [한국어](experiments/network-and-load/README.md) · [English](experiments/network-and-load/README.en.md) |
 | 전환·성능 승인·자동 복구 | [계획](docs/RELEASE_EXPERIMENT_PLAN.md) · [한국어](experiments/deployment-recovery/README.md) · [English](experiments/deployment-recovery/README.en.md) |
 

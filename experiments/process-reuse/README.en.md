@@ -1,8 +1,12 @@
-# TLS handshake latency with fresh and reused processes
+# TLS handshake performance: process initialization and configuration reuse
 
 [한국어](README.md) | English
 
 Run: `aws-extended-20260924T134811Z` · Source: `cfd6bcc` · [GitHub Actions evidence](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36007402798)
+
+## Scope
+
+This is a standalone TLS handshake performance experiment. It does not test deployment admission, CI/CD or failure recovery.
 
 ## What is being compared?
 

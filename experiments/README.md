@@ -1,8 +1,8 @@
-# KPQC TLS: 실험 및 정책 기반 배포 검증
+# KPQC TLS 실험 자료
 
-후속 실행 결과: [실행 순서 균형화 측정 보고서](process-reuse/README.md) · [English](process-reuse/README.en.md) · [그림 모음](process-reuse/gallery.html). 후속 결과는 기존 실행과 별도로 집계했으며 개별 실행 증적과 함께 제공한다.
+후속 실행 결과: [프로세스 초기화·설정 재사용 성능 비교](process-reuse/README.md) · [English](process-reuse/README.en.md) · [그림 모음](process-reuse/gallery.html). 후속 결과는 기존 실행과 별도로 집계했으며 개별 실행 증적과 함께 제공한다.
 
-국산 양자내성암호를 통합한 OpenSSL에서 TLS (Transport Layer Security) 1.3 핸드셰이크의 지연·자원 사용을 측정하고, 실제 협상 결과를 이용해 배포 후보의 정책 적합성을 검증한 실험 기록이다. 아래 주요 관측 표와 번호 문서는 최초 AWS (Amazon Web Services) 원자료의 재분석이다. 이후 실행은 `process-reuse/`와 `network-and-load/`에 별도 소스·이미지·원기록으로 보존한다.
+이 디렉터리는 성능 특성 측정과 정책 기반 배포 검증이라는 두 종류의 실행 기록을 담는다. 앞의 TLS 성능·네트워크 벤치마크는 배포 자동화나 복구 절차를 검증하지 않으며, 배포 판정 입력으로도 사용하지 않는다. 배포 성능은 별도의 고정 도착률 후보 시험과 사전 설정 SLO에서 측정한다. 아래 주요 관측 표와 번호 문서는 최초 AWS (Amazon Web Services) 원자료의 재분석이다. 프로세스 조건 비교(`process-reuse/`)는 배포 승인·복구와 별도로 수행한 TLS 성능 실험이다. 이후 실행은 `process-reuse/`와 `network-and-load/`에 별도 소스·이미지·원기록으로 보존한다.
 
 추가 네트워크·부하 실험: [한국어 보고서](network-and-load/README.md) · [English](network-and-load/README.en.md) · [그림 모음](network-and-load/gallery.html). 첫 배포 부하 실패와 별도 재시험을 구분해 보존했다.
 
@@ -18,6 +18,10 @@
 
 그림을 한 번에 보려면 [그림 모음](gallery.html)을 브라우저로 연다. 한국어·영어 PNG와 벡터 SVG를 `figures/ko`, `figures/en`에 제공한다. 그림은 같은 축 범위를 사용하며 모든 암호 조합을 포함한다. 영어 캡션은 [English captions](captions.en.md)에 있다.
 
+## A. TLS 성능·네트워크 특성 측정
+
+아래 초기 지연·RSS 관측과 `process-reuse/`, `network-and-load/` 보고서는 TLS 핸드셰이크 성능과 네트워크 영향을 측정한다.
+
 ## 주요 관측
 
 | 측정 조건 | X25519 + ECDSA (Elliptic Curve Digital Signature Algorithm) | PQC (Post-Quantum Cryptography) 구성별 중앙값 범위 |
@@ -28,6 +32,10 @@
 | 서버 최대 RSS 증가 | 420 KiB | 628–1,252 KiB |
 
 최종 AWS 배포 게이트는 63개 검증 항목을 통과했다. 표의 범위는 서로 다른 구성의 중앙값 범위이다. 서로 다른 보안 파라미터를 포함하므로 알고리즘 우열이나 동일 보안 수준의 순위를 의미하지 않는다.
+
+## B. 정책 기반 배포·복구
+
+`deployment-recovery/`는 암호·성능 기준에 따른 후보 승인, 배포 전환과 장애 후 복구를 시험한다. GitHub Actions 워크플로 증적은 이 DevOps 실험의 실행 기록이다.
 
 ## 재현과 증적
 

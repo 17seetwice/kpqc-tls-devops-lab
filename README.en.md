@@ -97,9 +97,9 @@ PYCODE
 
 The current expected outcome is `status: passed`, `checks: 63 / 63`, and `cleanup_errors: []`.
 
-### 5. Run a short handshake measurement
+### 5. Run a standalone TLS performance measurement
 
-After the gate test, run a short measurement over three representative configurations. It uses the same image and exercises fresh/reused-process conditions.
+This is a standalone benchmark, separate from the deployment gate. After the gate test, run a short measurement over three representative configurations. It uses the same image and exercises fresh/reused-process conditions.
 
 ```sh
 docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scripts/extended_handshake.py --local --balanced --smoke
@@ -117,41 +117,27 @@ Follow the [setup guide](docs/aws-setup.en.md) to prepare two lab EC2 instances 
 
 For a fork, update the repository restriction (`github.repository`) in the [workflow](.github/workflows/aws-deploy.yml) and the AWS role's trust conditions to match your repository. The local quick start requires neither change. After AWS execution, check `cleanup_complete` in the cleanup record and confirm that the EC2 instances are stopped.
 
-## Validation objectives and experimental design
+## Experiments in this repository
 
-The experiments measure KPQC TLS costs and validate cryptographic/performance-based deployment admission and recovery.
+This repository contains two distinct kinds of work. One measures KPQC TLS performance and network behavior. The other uses connection observations and cryptographic policy in DevOps deployment admission and recovery. Standalone TLS performance/network benchmarks run separately from the deployment pipeline. Deployment admission uses a separate candidate test with fixed-arrival-rate load and a predefined SLO (Service Level Objective); the standalone benchmark values are not inputs to that decision.
 
-### 1. Handshake cost
+### TLS performance and network characterization
 
-- Method: compare 42 KPQC combinations and a classical baseline; record latency, CPU time and message size, with separate memory runs.
-- Outcome: analyze 1,290 initial timing samples, 129 memory samples and 2,580 balanced-order timing samples. [Configuration results](experiments/process-reuse/README.en.md)
+These are standalone measurements of TLS timing, resource use and network effects.
 
-### 2. Network and concurrency
+- Compare latency, CPU time and message size for 42 KPQC combinations and a classical baseline; measure memory separately. The initial run analyzed 1,290 timing and 129 memory samples. The follow-up process-condition comparison analyzed 2,580 timing samples. [Methods and results](experiments/process-reuse/README.en.md)
+- Measure MTU, added delay, HRR and concurrency effects for five representative configurations. The concurrent-load trial validated 273,091 connections. [Network and throughput results](experiments/network-and-load/README.en.md)
 
-- Method: vary MTU, added delay, HRR and concurrency across five representative configurations.
-- Outcome: HRR adds approximately 31 ms at 30 ms added round-trip delay; validate 273,091 concurrent-load connections. [Network and throughput results](experiments/network-and-load/README.en.md)
+### Policy-based deployment and recovery
 
-### 3. Cryptographic gate
+These experiments connect actual TLS probes and performance targets to deployment decisions, then exercise automated rollout and recovery.
 
-- Method: require approved TLS 1.3/SMAUG1/HAETAE2 connections to succeed and classical-only or TLS 1.2 connections to fail.
-- Outcome: reject candidates accepting X25519 even when KPQC succeeds; pass 63 assertions including evidence checks.
+- Cryptographic gate: require TLS 1.3/SMAUG1/HAETAE2 connections and reject classical-only or TLS 1.2 probes. Reject a candidate that also accepts X25519, even if its KPQC connection succeeds. Pass 63 assertions, including evidence checks.
+- Performance admission: test each candidate at 10 arrivals/s for three 10-second windows. Check failure rate, completion within 200 ms, p95 and generator lateness. Admit two normal candidates; reject the 350 ms injected-delay candidate despite successful cryptographic checks. Each candidate completed 300 TLS connections.
+- Deployment under load and recovery: the retest recorded zero failures among 24,504 connections. A separate process-failure trial verified recovery in 2.951 s, with 21 failures among 150 attempts during the fault window.
+- Automation: GitHub Actions connects build, tests, AWS execution, evidence collection and cleanup. The final run passed 63 cryptographic-policy and 24 migration/admission/recovery assertions; EC2 shutdown and temporary SSH rule removal were confirmed. [Execution record](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
 
-### 4. Performance admission
-
-- Method: test each candidate at 10 arrivals/s for three 10-second windows; check failures, completion within 200 ms, p95 and generator lateness.
-- Outcome: admit two normal candidates and reject the injected 350 ms delay candidate, despite 300 successful TLS connections per candidate. [Criteria and decisions](experiments/deployment-recovery/README.en.md)
-
-### 5. Deployment and recovery
-
-- Method: test routing under load separately from server-process failure; recheck the previous approved KPQC service before recovery.
-- Outcome: zero failures in 24,504 deployment-retest connections. The separate fault test recovers in 2.951 s, with 21 failures among 150 attempts.
-
-### 6. Automation and evidence
-
-- Method: GitHub Actions runs build → tests → AWS deployment → evidence collection → cleanup.
-- Outcome: the final run passes 63 cryptographic-gate and 24 migration/admission/recovery assertions; EC2 shutdown and temporary SSH rule removal are confirmed. [Execution record](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
-
-Results apply to their individual execution conditions and are not pooled across runs. See the [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) or its [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) for the design rationale and detailed procedure.
+Results are summarized separately for each execution condition; values from different runs are not pooled. See the [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) and [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) for design rationale and detailed procedures.
 
 ## Environment and measurement boundaries
 
@@ -159,7 +145,7 @@ The server and client each run on one m7i.large EC2 instance in the same Seoul a
 
 | Experiment | Network conditions | Configurations |
 |---|---|---|
-| Initial and balanced-order measurements | Docker host networking, interface MTU 9001 | SMAUG 1/3/5 and NTRU+ 576/768/864/1152 × HAETAE 2/3/5 and AIMer 128f/192f/256f, plus the classical baseline |
+| TLS performance: process initialization/configuration reuse comparison | Docker host networking, interface MTU 9001 | SMAUG 1/3/5 and NTRU+ 576/768/864/1152 × HAETAE 2/3/5 and AIMer 128f/192f/256f, plus the classical baseline |
 | Network and concurrent load | Docker bridge; MTU 1500/9001 comparison; consult individual reports for each trial | Classical baseline and {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f} |
 | Performance admission and recovery | Docker bridge, MTU 1500 | Migration from X25519 + ECDSA P-256 to SMAUG1 + HAETAE2 |
 
@@ -174,7 +160,9 @@ Performance comparisons include different security parameter sets and do not ran
 
 Clients explicitly trust the self-signed server certificate and verify its hostname. Authentication is server-only, without mTLS (Mutual TLS). Experimental readiness and deployment-route selection occur outside the TLS call. This connection procedure and custom TLS identifiers assume test programs using the same image.
 
-## TLS handshake performance
+## TLS performance results
+
+The following results come from a standalone TLS benchmark, separate from deployment admission and recovery.
 
 The balanced follow-up analyzed 2,580 connections: 43 configurations × 2 modes × 30 measurements. Preparation and monitoring connections were excluded from analysis.
 
@@ -246,7 +234,7 @@ kpqc-tls-devops-lab/
 │   └── release-slo.json             # Performance and recovery objectives
 ├── experiments/                    # Published reports, evidence and plots
 │   ├── data/                        # Initial measurement and gate records
-│   ├── process-reuse/                    # Fresh/reused-process results
+│   ├── process-reuse/                    # Process initialization/configuration reuse results
 │   ├── network-and-load/                     # Network, load and deployment results
 │   └── deployment-recovery/                     # Admission and recovery results
 ├── docs/                            # Setup guides and walkthrough
@@ -263,13 +251,13 @@ Local runs write generated results to `artifacts/`. Published evidence is availa
 | Experiment | Documentation |
 |---|---|
 | Handshake, CPU and memory across 43 configurations | [Environment](experiments/01_environment.md) · [Methods](experiments/02_methods.md) · [Results](experiments/03_results.md) · [English captions](experiments/captions.en.md) |
-| TLS latency with fresh and reused processes | [English](experiments/process-reuse/README.en.md) · [한국어](experiments/process-reuse/README.md) |
+| TLS handshake performance: process initialization and configuration reuse | [English](experiments/process-reuse/README.en.md) · [한국어](experiments/process-reuse/README.md) |
 | MTU, network delay, HelloRetryRequest, concurrency and deployment under load | [English](experiments/network-and-load/README.en.md) · [한국어](experiments/network-and-load/README.md) |
 | Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](experiments/deployment-recovery/README.en.md) · [한국어](experiments/deployment-recovery/README.md) |
 
 Experiments have different environments and measurement boundaries; consult each report's conditions and execution records. Download the repository to open HTML reports and galleries in a browser.
 
-Evidence entry points: [initial summary CSV](experiments/data/summary.csv), [balanced summary CSV](experiments/process-reuse/summary.csv), [cryptographic-gate records](experiments/data/gate.public.json) and [final deployment raw records](experiments/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/gallery.html), [balanced order](experiments/process-reuse/gallery.html), [network/load](experiments/network-and-load/gallery.html) and [deployment/recovery](experiments/deployment-recovery/gallery.html).
+Evidence entry points: [initial summary CSV](experiments/data/summary.csv), [process-condition comparison summary CSV](experiments/process-reuse/summary.csv), [cryptographic-gate records](experiments/data/gate.public.json) and [final deployment raw records](experiments/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/gallery.html), [process-condition comparison](experiments/process-reuse/gallery.html), [network/load](experiments/network-and-load/gallery.html) and [deployment/recovery](experiments/deployment-recovery/gallery.html).
 
 Re-evaluate the public deployment records without running AWS. Run from the repository root; the command writes an audit summary to the specified directory.
 
