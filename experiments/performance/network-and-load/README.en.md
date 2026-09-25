@@ -83,7 +83,7 @@ Network analysis retains 270 connections and HRR analysis retains 216, excluding
 From the repository root:
 
 ```sh
-.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 

@@ -125,8 +125,8 @@ This repository contains two distinct kinds of work. One measures KPQC TLS perfo
 
 These are standalone measurements of TLS timing, resource use and network effects.
 
-- Compare latency, CPU time and message size for 42 KPQC combinations and a classical baseline; measure memory separately. The initial run analyzed 1,290 timing and 129 memory samples. The follow-up process-condition comparison analyzed 2,580 timing samples. [Methods and results](experiments/process-reuse/README.en.md)
-- Measure MTU, added delay, HRR and concurrency effects for five representative configurations. The concurrent-load trial validated 273,091 connections. [Network and throughput results](experiments/network-and-load/README.en.md)
+- Compare latency, CPU time and message size for 42 KPQC combinations and a classical baseline; measure memory separately. The initial run analyzed 1,290 timing and 129 memory samples. The follow-up process-condition comparison analyzed 2,580 timing samples. [Methods and results](experiments/performance/process-reuse/README.en.md)
+- Measure MTU, added delay, HRR and concurrency effects for five representative configurations. The concurrent-load trial validated 273,091 connections. [Network and throughput results](experiments/performance/network-and-load/README.en.md)
 
 ### Policy-based deployment and recovery
 
@@ -171,11 +171,11 @@ The balanced follow-up analyzed 2,580 connections: 43 configurations × 2 modes 
 | Fresh process | 1.724 ms | 3.891–12.218 ms |
 | Reused process | 0.815 ms | 2.852–11.500 ms |
 
-Measurements span the client's `SSL_connect` call. Each range gives the smallest and largest median across 42 KPQC configurations. In fresh-process mode, the server forks a child per connection. Reused-process mode still creates a new connection and performs a full TLS handshake each time. [Methods and complete results](experiments/process-reuse/README.en.md)
+Measurements span the client's `SSL_connect` call. Each range gives the smallest and largest median across 42 KPQC configurations. In fresh-process mode, the server forks a child per connection. Reused-process mode still creates a new connection and performs a full TLS handshake each time. [Methods and complete results](experiments/performance/process-reuse/README.en.md)
 
 ## Deployment lifecycle
 
-![Deployment and recovery](experiments/deployment-recovery/architecture.en.png)
+![Deployment and recovery](experiments/devops/deployment-recovery/architecture.en.png)
 
 1. Initial KPQC deployment candidate replaces X25519 + ECDSA P-256 with SMAUG1 + HAETAE2.
 2. Subsequent update candidate retains the algorithms but uses a new server certificate and a separate server process. Business functionality is unchanged.
@@ -199,7 +199,7 @@ Completion time spans scheduled arrival to test-client process exit, including i
 
 From the fault-injection request, detection took 1.596 s and verified recovery took 2.951 s. The 150 fault-window attempts included 21 failures; the final 20 all succeeded on the restored service. This is not a zero-downtime result.
 
-[English report](experiments/deployment-recovery/README.en.md) · [한국어 보고서](experiments/deployment-recovery/README.md) · [Figure gallery](experiments/deployment-recovery/gallery.html) · [Evidence audit](experiments/deployment-recovery/audit.json)
+[English report](experiments/devops/deployment-recovery/README.en.md) · [한국어 보고서](experiments/devops/deployment-recovery/README.md) · [Figure gallery](experiments/devops/deployment-recovery/gallery.html) · [Evidence audit](experiments/devops/deployment-recovery/audit.json)
 
 ## Cryptographic policy and CI/CD
 
@@ -211,58 +211,46 @@ GitHub Actions builds and tests the image locally, obtains temporary AWS credent
 
 ## Repository structure
 
-Selected files to understand and run the experiments.
+The repository separates standalone TLS performance/network measurements from DevOps deployment and recovery experiments.
 
 ```text
 kpqc-tls-devops-lab/
-├── .github/workflows/               # CI/CD workflows
-│   ├── experiment.yml               # Local checks on push/PR
-│   └── aws-deploy.yml               # Manual AWS experiments and cleanup
-├── scripts/                         # Experiment and validation code
-│   ├── tls_handshake.c              # TLS connections and instrumentation
-│   ├── extended_handshake.py        # Repeated configuration measurements
-│   ├── systems_experiments.py       # Network and concurrent-load trials
-│   ├── gate_suite.py                # Cryptographic-gate integration tests
-│   ├── gate_worker.py               # Test server/client/router control
-│   ├── gate_policy.py               # Cryptographic policy decisions
-│   ├── release_experiments.py       # Migration, admission and recovery
-│   ├── release_policy.py            # Response-performance decisions
-│   ├── ci_deploy.py                 # AWS execution, evidence and cleanup
-│   └── audit_release.py             # Re-evaluate public raw records
-├── policies/                        # Deployment admission criteria
-│   ├── pqc-required.json            # Required crypto and forbidden probes
-│   └── release-slo.json             # Performance and recovery objectives
-├── experiments/                    # Published reports, evidence and plots
-│   ├── data/                        # Initial measurement and gate records
-│   ├── process-reuse/                    # Process initialization/configuration reuse results
-│   ├── network-and-load/                     # Network, load and deployment results
-│   └── deployment-recovery/                     # Admission and recovery results
-├── docs/                            # Setup guides and walkthrough
-│   ├── lab-meeting/                 # Full walkthrough in Markdown/HTML
-│   └── assets/stack/                # Technology stack badges
-├── Dockerfile.gate                  # Build the KPQC test image
-└── compose.gate.yaml                # Local gate configuration
+├── .github/workflows/       CI/CD automation
+├── scripts/                 experiments, instrumentation, policy and deployment
+├── policies/                cryptographic and performance criteria
+├── experiments/
+│   ├── performance/         TLS performance and network measurements
+│   │   ├── initial/         initial run, raw data and figures
+│   │   │   ├── data/        handshake performance records
+│   │   │   └── figures/     performance plots
+│   │   ├── process-reuse/   process-condition comparison
+│   │   └── network-and-load/ network and load trials
+│   └── devops/              policy-based deployment and recovery
+│       ├── gate-evidence/   cryptographic gate evidence
+│       └── deployment-recovery/ migration, admission and recovery
+├── docs/                    setup guides and walkthrough
+├── Dockerfile.gate          KPQC test image
+└── compose.gate.yaml        local gate configuration
 ```
-
-Local runs write generated results to `artifacts/`. Published evidence is available under `experiments/`.
 
 ## Other experiments and reproduction
 
 | Experiment | Documentation |
 |---|---|
-| Handshake, CPU and memory across 43 configurations | [Environment](experiments/01_environment.md) · [Methods](experiments/02_methods.md) · [Results](experiments/03_results.md) · [English captions](experiments/captions.en.md) |
-| TLS handshake performance: process initialization and configuration reuse | [English](experiments/process-reuse/README.en.md) · [한국어](experiments/process-reuse/README.md) |
-| MTU, network delay, HelloRetryRequest, concurrency and deployment under load | [English](experiments/network-and-load/README.en.md) · [한국어](experiments/network-and-load/README.md) |
-| Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](experiments/deployment-recovery/README.en.md) · [한국어](experiments/deployment-recovery/README.md) |
+| Handshake, CPU and memory across 43 configurations | [Environment](experiments/performance/initial/01_environment.md) · [Methods](experiments/performance/initial/02_methods.md) · [Results](experiments/performance/initial/03_results.md) · [English captions](experiments/performance/initial/captions.en.md) |
+| TLS handshake performance: process initialization and configuration reuse | [English](experiments/performance/process-reuse/README.en.md) · [한국어](experiments/performance/process-reuse/README.md) |
+| MTU, network delay, HelloRetryRequest and concurrency measurements | [English](experiments/performance/network-and-load/README.en.md) · [한국어](experiments/performance/network-and-load/README.md) |
+| Deployment route switch under load (DevOps scenario) | [Trial and results](experiments/performance/network-and-load/README.en.md#4-deployment-under-load) · [DevOps index](experiments/devops/README.en.md) |
+| Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](experiments/devops/deployment-recovery/README.en.md) · [한국어](experiments/devops/deployment-recovery/README.md) |
 
 Experiments have different environments and measurement boundaries; consult each report's conditions and execution records. Download the repository to open HTML reports and galleries in a browser.
 
-Evidence entry points: [initial summary CSV](experiments/data/summary.csv), [process-condition comparison summary CSV](experiments/process-reuse/summary.csv), [cryptographic-gate records](experiments/data/gate.public.json) and [final deployment raw records](experiments/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/gallery.html), [process-condition comparison](experiments/process-reuse/gallery.html), [network/load](experiments/network-and-load/gallery.html) and [deployment/recovery](experiments/deployment-recovery/gallery.html).
+Evidence entry points: [initial summary CSV](experiments/performance/initial/data/summary.csv), [process-condition comparison summary CSV](experiments/performance/process-reuse/summary.csv), [cryptographic-gate records](experiments/devops/gate-evidence/gate.public.json) and [final deployment raw records](experiments/devops/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/performance/initial/gallery.html), [process-condition comparison](experiments/performance/process-reuse/gallery.html), [network/load](experiments/performance/network-and-load/gallery.html) and [deployment/recovery](experiments/devops/deployment-recovery/gallery.html).
 
 Re-evaluate the public deployment records without running AWS. Run from the repository root; the command writes an audit summary to the specified directory.
 
 ```sh
-python3 scripts/audit_release.py experiments/deployment-recovery/measurements.public.json --out /tmp/kpqc-release-audit
+python3 scripts/audit_release.py experiments/devops/deployment-recovery/measurements.public.json --out /tmp/kpqc-release-audit
 ```
 
 Core code: [TLS instrumentation](scripts/tls_handshake.c), [cryptographic policy](scripts/gate_policy.py), [performance policy](scripts/release_policy.py), [migration/recovery experiment](scripts/release_experiments.py), [AWS lifecycle](scripts/ci_deploy.py). [AWS setup guide](docs/aws-setup.en.md)

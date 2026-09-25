@@ -148,9 +148,9 @@ KEM은 SMAUG 1/3/5와 NTRU+ 576/768/864/1152의 7개, 서명은 HAETAE 2/3/5와 
 
 초기 별도 메모리 실행에서 KPQC 구성별 중앙값 범위는 클라이언트 648–980 KiB, 서버 628–1,252 KiB였고, 기준선은 460/420 KiB였다. 이는 구간 최대 RSS 증가량이며 총 메모리 요구량이 아니다. 후속 순서 균형화 실행은 메모리를 다시 측정하지 않았다.
 
-CPU와 메시지 바이트도 원기록에 남겼다. 본 설명에서 수치를 생략한 지표를 미측정으로 뜻하지는 않는다. 상세 값은 [초기 집계 CSV](../../experiments/data/summary.csv)와 원기록을 확인한다.
+CPU와 메시지 바이트도 원기록에 남겼다. 본 설명에서 수치를 생략한 지표를 미측정으로 뜻하지는 않는다. 상세 값은 [초기 집계 CSV](../../experiments/performance/initial/data/summary.csv)와 원기록을 확인한다.
 
-자료: [초기 결과](../../experiments/03_results.md), [순서 균형화 결과](../../experiments/process-reuse/README.md).
+자료: [초기 결과](../../experiments/performance/initial/03_results.md), [순서 균형화 결과](../../experiments/performance/process-reuse/README.md).
 
 ## 7. 실험 2: 실제 협상에 근거한 암호 정책 게이트
 
@@ -225,7 +225,7 @@ HRR 유발 180회는 각 1회, 대조 180회는 각 0회를 관측했다. 준비
 
 전환 후 이전 서버의 유휴 작업자가 `accept` 시간 초과로 종료되는 문제도 관측했다. 이 단계는 신규 서비스 전환을 보여줬지만, 이전 서비스가 즉시 복구 가능한 상태로 유지되는지까지 보장하지 않았다. 그 문제를 다음 실험에서 수정·검증했다.
 
-자료: [네트워크·부하 결과](../../experiments/network-and-load/README.md).
+자료: [네트워크·부하 결과](../../experiments/performance/network-and-load/README.md).
 
 ## 9. 실험 4: 성능 측정을 배포 승인과 연결
 
@@ -292,7 +292,7 @@ p95는 관측값의 95%가 그 값 이하인 백분위수다. 모든 구간이 �
 
 최종 전환·성능 승인·복구 검증은 24개 항목을 통과했다. 기존 암호 정책 게이트 63개도 같은 AWS 워크플로에서 통과했다.
 
-자료: [최종 보고서](../../experiments/deployment-recovery/README.md), [원자료 검증](../../experiments/deployment-recovery/audit.json).
+자료: [최종 보고서](../../experiments/devops/deployment-recovery/README.md), [원자료 검증](../../experiments/devops/deployment-recovery/audit.json).
 
 ## 11. CI/CD 실행과 증적 관리
 

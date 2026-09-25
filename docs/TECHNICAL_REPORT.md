@@ -1,6 +1,6 @@
 # KPQC 기반 TLS 1.3 성능 측정 및 정책 기반 배포 검증
 
-후속 실험은 [전환·성능 승인·복구 보고서](../experiments/deployment-recovery/README.md)를 참조한다. 아래 내용은 초기 실험 기록이다.
+후속 실험은 [전환·성능 승인·복구 보고서](../experiments/devops/deployment-recovery/README.md)를 참조한다. 아래 내용은 초기 실험 기록이다.
 
 기술보고서 개정안 · 사용자 검토용 · 2026-09-24
 
@@ -52,7 +52,7 @@ TCP (Transmission Control Protocol) 연결 준비·HTTP (Hypertext Transfer Prot
 | 클라이언트 최대 RSS 증가 | 460 KiB | 648–980 KiB |
 | 서버 최대 RSS 증가 | 420 KiB | 628–1,252 KiB |
 
-총 수집 연결은 1,935회이며 시간 분석 1,290회, 메모리 분석 129회, 준비·감시 연결 516회로 구성된다. 수집 연결의 세션 재개와 HRR은 모두 0회였다. 전체 그림과 구성별 값은 [결과 및 캡션](../experiments/03_results.md)과 [요약 CSV](../experiments/data/summary.csv)에 제시한다.
+총 수집 연결은 1,935회이며 시간 분석 1,290회, 메모리 분석 129회, 준비·감시 연결 516회로 구성된다. 수집 연결의 세션 재개와 HRR은 모두 0회였다. 전체 그림과 구성별 값은 [결과 및 캡션](../experiments/performance/initial/03_results.md)과 [요약 CSV](../experiments/performance/initial/data/summary.csv)에 제시한다.
 
 최종 AWS 게이트는 63/63개 검증 항목을 통과하였다. 활성 경로 관측 69회에서 실패는 없었다. 검증 항목 수는 성공한 TLS 연결 수와 다르며, 예상된 오류 후보 거절도 포함한다.
 

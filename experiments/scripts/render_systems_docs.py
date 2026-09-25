@@ -12,7 +12,7 @@ from pathlib import Path
 
 import markdown
 
-ROOT = Path(__file__).resolve().parents[1] / 'network-and-load'
+ROOT = Path(__file__).resolve().parents[1] / 'performance' / 'network-and-load'
 PAGES = {
     'README.md': ('README.html', 'ko', 'KPQC TLS 실험 보고서'),
     'README.en.md': ('README.en.html', 'en', 'KPQC TLS experiment report'),

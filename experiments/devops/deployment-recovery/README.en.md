@@ -57,4 +57,4 @@ An earlier full Mac amd64-emulation trial rejected a healthy candidate because 2
 
 This bounded trial validates admission and recovery, not maximum capacity, banking-service SLOs, long-term availability or automatic source-code migration. Initial classical-to-KPQC migration and subsequent recovery to the previously approved KPQC deployment are distinct. No classical rollback is allowed after migration.
 
-[Workflow evidence](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Plan](../../docs/RELEASE_EXPERIMENT_PLAN.md)
+[Workflow evidence](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Plan](../../../docs/RELEASE_EXPERIMENT_PLAN.md)

@@ -25,7 +25,7 @@ footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
 <a href="audit.html">Audit</a></nav>
 <h1>KPQC TLS: 네트워크 조건과 동시 부하 실험 결과</h1>
 <p><a href="README.en.html">English</a> · <a href="gallery.html">그림 모음</a> · <a href="METHODS.html">실험 방법</a></p>
-<p>MTU (Maximum Transmission Unit), 추가 네트워크 지연, HRR (HelloRetryRequest), 동시 접속과 부하 중 배포 전환을 기존 EC2 두 대에서 측정했다. 대표 암호 조합 5개를 사용했으며, 인증서 체인과 추가 메모리 측정은 이번 범위에서 제외했다.</p>
+<p>이 보고서는 두 갈래 시험을 함께 기록한다. MTU (Maximum Transmission Unit)·추가 네트워크 지연·HRR (HelloRetryRequest)·동시 접속은 TLS 성능 특성 측정이다. 마지막 부하 중 배포 전환 항목은 DevOps 배포 시나리오이며, 성능 벤치마크와 구분해 해석한다. 두 시험은 기존 EC2 두 대와 대표 암호 조합 5개를 사용했다.</p>
 <p><a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36016712344">성능 측정 실행</a> · 소스 <code>fa1202c</code> · 성능 검증 654항목 통과. <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36025021206">배포 부하 재시험</a> · 소스 <code>c9ebcfa</code>. 실행 후 <strong>두 EC2의 중지 상태를 AWS API로 별도 확인</strong>했다. 이번 결과는 사용자 검토용이며 저장소 루트의 기존 성능표를 대체하지 않았다.</p>
 <h2>1. MTU 및 네트워크 지연</h2>
 <p>AWS는 모든 EC2 인스턴스의 MTU1500 지원과 인터넷 게이트웨이 트래픽의 1500바이트 제한을 명시한다. 기존 MTU9001 환경에 MTU1500 대조군을 두는 것은 타당하다. 두 조건은 같은 Docker 브리지 구성에서 비교했다. <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network_mtu.html">AWS 공식 문서</a></p>
@@ -186,7 +186,7 @@ footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
 <li><a href="measurements.public.json.gz">성능 및 최초 실패 원기록</a> · <a href="rollout.public.json.gz">배포 재시험 원기록</a> · <a href="REVIEW_LOG.md">검토 기록</a></li>
 </ul>
 <p>저장소 루트에서 실행:</p>
-<pre><code class="language-sh">.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+<pre><code class="language-sh">.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 </code></pre>
 <p>세 블록은 동일 인스턴스 쌍의 한 실행에 속한다. 기존 호스트 네트워크 결과와 직접 합산하지 않으며, 이번 대표 파라미터 밖의 조합과 실서비스의 처리 용량으로 일반화하지 않는다.</p>

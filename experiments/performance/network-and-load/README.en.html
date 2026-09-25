@@ -25,7 +25,7 @@ footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
 <a href="audit.html">Audit</a></nav>
 <h1>KPQC TLS: network sensitivity and concurrent deployment</h1>
 <p><a href="README.html">한국어</a> · <a href="gallery.html">Figure gallery</a> · <a href="METHODS.en.html">Methods</a></p>
-<p>The existing two-node EC2 lab tested MTU (Maximum Transmission Unit), added network delay, HRR (HelloRetryRequest), concurrent full handshakes, and policy-gated deployment under load. Five representative profiles were tested. Certificate chains and memory were outside this follow-up run.</p>
+<p>This report records two related but distinct trials. MTU (Maximum Transmission Unit), added network delay, HRR (HelloRetryRequest) and concurrency characterize TLS performance. The final rollout-under-load section is a DevOps deployment scenario and should be read separately from the performance benchmarks. Both trials used the existing two EC2 instances and five representative cryptographic configurations.</p>
 <p><a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36016712344">Performance execution</a> · Source <code>fa1202c</code> · 654 performance assertions passed. <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36025021206">Rollout retry</a> · Source <code>c9ebcfa</code>. <strong>Both instances were independently confirmed stopped through the AWS API.</strong> These results are prepared for review; they have not replaced the repository's existing main result tables.</p>
 <h2>1. MTU and network delay</h2>
 <p>AWS documents MTU1500 support on all EC2 instance types and a 1500-byte limit for Internet-gateway traffic. Comparing MTU1500 with the prior jumbo-frame environment is therefore relevant. Both new treatments use the same Docker bridge topology. <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/network_mtu.html">AWS documentation</a></p>
@@ -186,7 +186,7 @@ footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
 <li><a href="measurements.public.json.gz">Performance and initial failure records</a> · <a href="rollout.public.json.gz">Rollout retry records</a> · <a href="REVIEW_LOG.md">Review log</a></li>
 </ul>
 <p>From the repository root:</p>
-<pre><code class="language-sh">.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+<pre><code class="language-sh">.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 </code></pre>
 <p>The three blocks belong to one execution on the same instance pair. Do not pool these bridge-network measurements with previous host-network results or generalize them to untested parameters or production service capacity.</p>

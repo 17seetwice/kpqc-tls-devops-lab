@@ -25,7 +25,7 @@ Reuse applies within repeated connections for one configuration. Fresh-process m
 
 ### How is this implemented in code?
 
-The measurement script passes the mode and connection count to the server and client workers. `warm` is false for cold mode and true for warm mode. See [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L68).
+The measurement script passes the mode and connection count to the server and client workers. `warm` is false for cold mode and true for warm mode. See [scripts/extended_handshake.py](../../../scripts/extended_handshake.py#L62-L68).
 
 ```python
 count = 5 if mode == 'warm' else 3
@@ -34,7 +34,7 @@ worker('server', {'action': 'start', **q})
 cs = worker('client', {'action': 'clients', **q, 'ip': IP})['rows']
 ```
 
-In warm mode, the client worker starts the C test program once to handle five connections. In cold mode, it starts the program once per connection inside a loop. See [scripts/handshake_worker.py](../../scripts/handshake_worker.py#L45-L64).
+In warm mode, the client worker starts the C test program once to handle five connections. In cold mode, it starts the program once per connection inside a loop. See [scripts/handshake_worker.py](../../../scripts/handshake_worker.py#L45-L64).
 
 ```python
 if q.get('warm'):
@@ -45,7 +45,7 @@ else:
         p = subprocess.run([BIN, 'client', q.get('client_kem', k), sigalg(q.get('client_signature', s)), str(STATE/f'{q.get("trust_signature", s)}.crt'), '-', q['ip'], '4433', str(path), '1', q.get('host', 'kpqc-lab.internal')], capture_output=True, timeout=25, env=env)
 ```
 
-In C `handshake()`, `KPQC_WARM` selects either the saved OpenSSL `SSL_CTX` configuration or a newly created context. Both paths create a new per-connection `SSL` object. See [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L148-L155).
+In C `handshake()`, `KPQC_WARM` selects either the saved OpenSSL `SSL_CTX` configuration or a newly created context. Both paths create a new per-connection `SSL` object. See [scripts/tls_handshake.c](../../../scripts/tls_handshake.c#L148-L155).
 
 ```c
 if (getenv("KPQC_WARM")) {
@@ -58,7 +58,7 @@ if (getenv("KPQC_WARM")) {
 SSL *s = SSL_new(c);  // new TLS connection object for each connection
 ```
 
-In cold mode, the server handles each accepted connection in a child process. In warm mode, the server process handles repeated connections. See [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L298-L307).
+In cold mode, the server handles each accepted connection in a child process. In warm mode, the server process handles repeated connections. See [scripts/tls_handshake.c](../../../scripts/tls_handshake.c#L298-L307).
 
 ```c
 if(getenv("KPQC_WARM")){
@@ -75,7 +75,7 @@ close(conn);
 waitpid(p,&status,0);
 ```
 
-Warm mode makes five connections: the first two are marked as preparation runs and the next three are analyzed. This is recorded by `count` and `warmup` in [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L76). Here, keeping the process running means retaining the server/client test programs during these repeated measurements; it does not mean restarting or retaining EC2 instances or containers per connection.
+Warm mode makes five connections: the first two are marked as preparation runs and the next three are analyzed. This is recorded by `count` and `warmup` in [scripts/extended_handshake.py](../../../scripts/extended_handshake.py#L62-L76). Here, keeping the process running means retaining the server/client test programs during these repeated measurements; it does not mean restarting or retaining EC2 instances or containers per connection.
 
 ### Why change the measurement order?
 
@@ -213,7 +213,7 @@ Cleanup evidence reports completion with no errors. A separate AWS API (Applicat
 ## Reproduction
 
 ```sh
-.venv/bin/python 'experiments/scripts/analyze_balanced.py' 'experiments/process-reuse/measurements.public.json' 'experiments/process-reuse'
+.venv/bin/python 'experiments/scripts/analyze_balanced.py' 'experiments/performance/process-reuse/measurements.public.json' 'experiments/performance/process-reuse'
 ```
 
 `measurements.public.json` contains the public workflow measurements; `workflow.public.json` contains gate and cleanup evidence. `summary.csv`, `blocks.csv` and `paired.csv` hold configuration medians, block medians and paired-mode ratios. `audit.json` records the validation summary.

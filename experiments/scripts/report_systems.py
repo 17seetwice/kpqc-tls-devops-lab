@@ -2,7 +2,7 @@
 """Generate bilingual result tables from audited block CSVs."""
 import csv,json,statistics as st
 from pathlib import Path
-P=Path('experiments/network-and-load')
+P=Path('experiments/performance/network-and-load')
 a=json.loads((P/'audit.json').read_text())
 def read(name):return list(csv.DictReader((P/name).open()))
 net=read('network_blocks.csv');hrr=read('paired_contrasts.csv');load=read('throughput_blocks.csv')
@@ -97,7 +97,7 @@ HRR 유발 연결 180회에서 각각 HRR 1회, 대조 연결 180회에서 HRR 0
 저장소 루트에서 실행:
 
 ```sh
-.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 
@@ -175,7 +175,7 @@ Network analysis retains {a['network_analyzed']} connections and HRR analysis re
 From the repository root:
 
 ```sh
-.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 

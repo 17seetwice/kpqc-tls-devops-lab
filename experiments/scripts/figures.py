@@ -1,7 +1,7 @@
 """Paper figures from archived, sanitized session records; no AWS execution."""
 import os, json, csv, statistics as st
 from pathlib import Path
-BASE = Path(__file__).resolve().parents[1]
+BASE = Path(__file__).resolve().parents[1] / 'performance' / 'initial'
 os.environ.setdefault('MPLCONFIGDIR', str(BASE.parent / '.mplconfig'))
 import matplotlib
 matplotlib.use('Agg')

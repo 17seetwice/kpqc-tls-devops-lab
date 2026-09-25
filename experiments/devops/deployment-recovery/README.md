@@ -57,4 +57,4 @@ Mac amd64 에뮬레이션 전체 시험에서는 정상 후보의 100개 중2개
 
 이 실험은 제한된 부하에서 승인·거절과 복구 경로의 기능을 보여준다. 최대 처리량·금융 업무 SLO·장기간 운영 가용성·자동 코드 변환을 입증하지 않는다. 고전→KPQC 전환과 이후 신규 배포 서비스에서 이전 승인 서비스로의 복구를 구분하며, 전환 후 고전 서비스로 복귀하지 않는다.
 
-[워크플로 증적](workflow.public.json) · [정리 확인](cleanup-verification.json) · [실험 계획](../../docs/RELEASE_EXPERIMENT_PLAN.md)
+[워크플로 증적](workflow.public.json) · [정리 확인](cleanup-verification.json) · [실험 계획](../../../docs/RELEASE_EXPERIMENT_PLAN.md)

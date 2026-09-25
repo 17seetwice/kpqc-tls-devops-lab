@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [그림 모음](gallery.html) · [실험 방법](METHODS.md)
 
-MTU (Maximum Transmission Unit), 추가 네트워크 지연, HRR (HelloRetryRequest), 동시 접속과 부하 중 배포 전환을 기존 EC2 두 대에서 측정했다. 대표 암호 조합 5개를 사용했으며, 인증서 체인과 추가 메모리 측정은 이번 범위에서 제외했다.
+이 보고서는 두 갈래 시험을 함께 기록한다. MTU (Maximum Transmission Unit)·추가 네트워크 지연·HRR (HelloRetryRequest)·동시 접속은 TLS 성능 특성 측정이다. 마지막 부하 중 배포 전환 항목은 DevOps 배포 시나리오이며, 성능 벤치마크와 구분해 해석한다. 두 시험은 기존 EC2 두 대와 대표 암호 조합 5개를 사용했다.
 
 [성능 측정 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36016712344) · 소스 `fa1202c` · 성능 검증 654항목 통과. [배포 부하 재시험](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36025021206) · 소스 `c9ebcfa`. 실행 후 **두 EC2의 중지 상태를 AWS API로 별도 확인**했다. 이번 결과는 사용자 검토용이며 저장소 루트의 기존 성능표를 대체하지 않았다.
 
@@ -83,7 +83,7 @@ HRR 유발 연결 180회에서 각각 HRR 1회, 대조 연결 180회에서 HRR 0
 저장소 루트에서 실행:
 
 ```sh
-.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/performance/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/performance/network-and-load/rollout.public.json.gz'
 .venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 

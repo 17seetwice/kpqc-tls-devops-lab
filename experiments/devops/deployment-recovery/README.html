@@ -58,4 +58,4 @@
 <p>기존 서버의 유휴 <code>accept</code> 시간 초과 시 작업자가 종료되던 문제를 수정했다. 17초 유휴 후 작업자8개와 정상 접속을 확인했고, 승인된 이전 서비스는 다음 후보 측정 동안에도 복구 대상으로 유지했다.</p>
 <p>Mac amd64 에뮬레이션 전체 시험에서는 정상 후보의 100개 중2개가200ms를 넘어서 성능 게이트가 거절한 기록도 보존했다. 기준을 완화하지 않고 네이티브 Linux 전체 사전시험 및 AWS 시험을 분리했다. 수치는 이번 AWS 실행에 한정한다.</p>
 <p>이 실험은 제한된 부하에서 승인·거절과 복구 경로의 기능을 보여준다. 최대 처리량·금융 업무 SLO·장기간 운영 가용성·자동 코드 변환을 입증하지 않는다. 고전→KPQC 전환과 이후 신규 배포 서비스에서 이전 승인 서비스로의 복구를 구분하며, 전환 후 고전 서비스로 복귀하지 않는다.</p>
-<p><a href="workflow.public.json">워크플로 증적</a> · <a href="cleanup-verification.json">정리 확인</a> · <a href="../../docs/RELEASE_EXPERIMENT_PLAN.md">실험 계획</a></p></html>
+<p><a href="workflow.public.json">워크플로 증적</a> · <a href="cleanup-verification.json">정리 확인</a> · <a href="../../../docs/RELEASE_EXPERIMENT_PLAN.md">실험 계획</a></p></html>
