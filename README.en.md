@@ -119,49 +119,39 @@ For a fork, update the repository restriction (`github.repository`) in the [work
 
 ## Validation objectives and experimental design
 
-The objective is to measure KPQC TLS costs under bounded resources and determine whether observed cryptographic settings and response performance can govern deployment admission and recovery. The experiments separate performance measurement, cryptographic enforcement and deployment recovery.
+The experiments measure KPQC TLS costs and validate cryptographic/performance-based deployment admission and recovery.
 
-### 1. Handshake cost across configurations
+### 1. Handshake cost
 
-Method and criteria: Compare 42 combinations of seven SMAUG/NTRU+ parameter sets and six HAETAE/AIMer parameter sets against X25519 + ECDSA P-256. Record full-handshake latency, CPU time on both endpoints and message bytes; measure memory separately.
+- Method: compare 42 KPQC combinations and a classical baseline; record latency, CPU time and message size, with separate memory runs.
+- Outcome: analyze 1,290 initial timing samples, 129 memory samples and 2,580 balanced-order timing samples. [Configuration results](after_claude/balanced/README.en.md)
 
-Observed outcome: The initial run analyzed 1,290 timing and 129 memory samples. The follow-up balanced fresh/reused-process order and analyzed 2,580 timing samples. Configuration-level latency is summarized below.
+### 2. Network and concurrency
 
-### 2. Network and concurrency effects
+- Method: vary MTU, added delay, HRR and concurrency across five representative configurations.
+- Outcome: HRR adds approximately 31 ms at 30 ms added round-trip delay; validate 273,091 concurrent-load connections. [Network and throughput results](after_claude/systems/README.en.md)
 
-Method and criteria: Compare five representative configurations at MTU (Maximum Transmission Unit) 1500/9001 and added round-trip delay 0/10/30 ms. Compare HRR (HelloRetryRequest) with a control using the same final algorithms. Measure throughput with eight server workers and 1/4/16 client processes.
+### 3. Cryptographic gate
 
-Observed outcome: At 30 ms added delay, SMAUG1 + AIMer128f measured 62.576 ms at MTU 1500 and 34.128 ms at MTU 9001. HRR added approximately 31 ms. Concurrent-load tests validated 273,091 connections.
+- Method: require approved TLS 1.3/SMAUG1/HAETAE2 connections to succeed and classical-only or TLS 1.2 connections to fail.
+- Outcome: reject candidates accepting X25519 even when KPQC succeeds; pass 63 assertions including evidence checks.
 
-### 3. Rejection of forbidden cryptographic settings
+### 4. Performance admission
 
-Method and criteria: Require observed TLS 1.3, SMAUG1, HAETAE2, the specified cipher suite and successful certificate verification. Classical-only key exchange/signature and TLS 1.2 probes must fail. Check evidence freshness and binding to candidate, certificate fingerprint, image and policy.
+- Method: test each candidate at 10 arrivals/s for three 10-second windows; check failures, completion within 200 ms, p95 and generator lateness.
+- Outcome: admit two normal candidates and reject the injected 350 ms delay candidate, despite 300 successful TLS connections per candidate. [Criteria and decisions](after_claude/release/README.en.md)
 
-Observed outcome: Candidates accepting both KPQC and classical connections were rejected despite successful KPQC connectivity. The cryptographic gate passed 63 assertions, including mismatched or stale evidence and probe errors.
+### 5. Deployment and recovery
 
-### 4. Performance-based deployment admission
+- Method: test routing under load separately from server-process failure; recheck the previous approved KPQC service before recovery.
+- Outcome: zero failures in 24,504 deployment-retest connections. The separate fault test recovers in 2.951 s, with 21 failures among 150 attempts.
 
-Method and criteria: Test each candidate at 10 arrivals/s for three 10-second windows. Every window requires failure rate ≤1%, ≥99% completion within 200 ms, successful completion p95 ≤200 ms and generator lateness p95 ≤50 ms.
+### 6. Automation and evidence
 
-Observed outcome: All three candidates completed 300 successful TLS connections each. Two normal candidates were admitted; the candidate with an injected 350 ms delay passed cryptographic checks but was rejected on performance.
+- Method: GitHub Actions runs build → tests → AWS deployment → evidence collection → cleanup.
+- Outcome: the final run passes 63 cryptographic-gate and 24 migration/admission/recovery assertions; EC2 shutdown and temporary SSH rule removal are confirmed. [Execution record](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
 
-### 5. Deployment under load and recovery after failure
-
-Method and criteria: Test routing between healthy services separately from stopping the new service's processes. Recheck the previous approved KPQC service's current TLS health and certificate before restoring routing.
-
-Observed outcome: The deployment retest observed zero failures across 24,504 attempts. The separate fault experiment detected failure in 1.596 s and verified recovery in 2.951 s, with 21 failures among 150 attempts.
-
-### 6. Automation and execution traceability
-
-Method and criteria: Connect image build/test, AWS execution, policy decisions, evidence collection and cleanup through GitHub Actions. Preserve source commits, image identifiers, certificate fingerprints and raw records.
-
-Observed outcome: The final AWS run passed 63 cryptographic-gate and 24 migration/admission/recovery assertions. Both EC2 instances were stopped and temporary SSH ingress was removed afterward.
-
-For example, a candidate may change from SMAUG1-only to accepting both SMAUG1 and X25519. A successful KPQC probe alone would miss this regression. The gate also attempts an X25519-only connection and rejects the candidate if that connection succeeds. A cryptographically compliant candidate is likewise rejected if it exceeds the response-performance limits.
-
-Performance comparisons report observations; deployment decisions apply criteria fixed before testing. Connection counts and latencies from different runs are not pooled. Network latency values above are medians of three block medians. The [network and load report](after_claude/systems/README.en.md) preserves detailed conditions and the failed initial deployment attempt.
-
-The [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) explains the objectives, environment, methods and results. Download its [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) to view it in a browser.
+Results apply to their individual execution conditions and are not pooled across runs. See the [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) or its [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) for the design rationale and detailed procedure.
 
 ## Environment and measurement boundaries
 
@@ -230,6 +220,43 @@ Policy requires TLS 1.3, SMAUG1, HAETAE2 and TLS_AES_256_GCM_SHA384. KEM and sig
 GitHub Actions builds and tests the image locally, obtains temporary AWS credentials through OIDC (OpenID Connect), and uses SSH (Secure Shell) to deploy the identical image to the existing server and client. It saves evidence, stops both EC2 instances and removes temporary SSH ingress. Push-triggered CI does not start EC2 instances.
 
 [The AWS execution](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708) passed 63 cryptographic-gate assertions and 24 migration, admission and recovery assertions. Experiment source `c232f7d` is distinct from subsequent documentation and CI fixes. Both instances were confirmed stopped by the workflow and an independent AWS query.
+
+## Repository structure
+
+Selected files to understand and run the experiments.
+
+```text
+kpqc-tls-devops-lab/
+├── .github/workflows/               # CI/CD workflows
+│   ├── experiment.yml               # Local checks on push/PR
+│   └── aws-deploy.yml               # Manual AWS experiments and cleanup
+├── scripts/                         # Experiment and validation code
+│   ├── tls_handshake.c              # TLS connections and instrumentation
+│   ├── extended_handshake.py        # Repeated configuration measurements
+│   ├── systems_experiments.py       # Network and concurrent-load trials
+│   ├── gate_suite.py                # Cryptographic-gate integration tests
+│   ├── gate_worker.py               # Test server/client/router control
+│   ├── gate_policy.py               # Cryptographic policy decisions
+│   ├── release_experiments.py       # Migration, admission and recovery
+│   ├── release_policy.py            # Response-performance decisions
+│   ├── ci_deploy.py                 # AWS execution, evidence and cleanup
+│   └── audit_release.py             # Re-evaluate public raw records
+├── policies/                        # Deployment admission criteria
+│   ├── pqc-required.json            # Required crypto and forbidden probes
+│   └── release-slo.json             # Performance and recovery objectives
+├── after_claude/                    # Published reports, evidence and plots
+│   ├── data/                        # Initial measurement and gate records
+│   ├── balanced/                    # Balanced-order results
+│   ├── systems/                     # Network, load and deployment results
+│   └── release/                     # Admission and recovery results
+├── docs/                            # Setup guides and walkthrough
+│   ├── lab-meeting/                 # Full walkthrough in Markdown/HTML
+│   └── assets/stack/                # Technology stack badges
+├── Dockerfile.gate                  # Build the KPQC test image
+└── compose.gate.yaml                # Local gate configuration
+```
+
+Local runs write generated results to `artifacts/`. Published evidence is available under `after_claude/`.
 
 ## Other experiments and reproduction
 
