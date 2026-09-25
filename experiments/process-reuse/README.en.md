@@ -41,6 +41,88 @@ Two existing EC2 (Elastic Compute Cloud) instances performed sequential TLS (Tra
 
 All 3,600 collected connections passed the protocol checks; 2,580 enter latency analysis and 1,020 are warm-up or sentinel observations. The audit checked negotiated group/signature identifiers, certificate verification, TLS version and cipher, disabled session resumption, zero HRR (HelloRetryRequest), matching directional message bytes, mode-order balance and paired configuration order. No new memory experiment was performed.
 
+### Which recorded fields are validated?
+
+These are actual JSON field names. Each connection is stored under `rounds[].profiles[].sessions[]`, with separate `client` and `server` records. Profile `kem`/`signature` names describe the intended configuration; `group_code`/`signature_code` are numeric identifiers observed in TLS messages.
+
+| Check | JSON field | Expected value or comparison |
+|---|---|---|
+| Handshake success | `success` | `true` |
+| Key-exchange group | `group_code` | `codes[k]`; e.g. `smaug1` → `65056` (`0xFE20`) |
+| Server authentication signature | `signature_code` | `sigs[s]`; e.g. `haetae2` → `65408` (`0xFF80`) |
+| Certificate verification | `verify_result` | `0`: no verification error |
+| Protocol version | `tls_version` | `"TLSv1.3"` |
+| Cipher suite | `cipher` | `"TLS_AES_256_GCM_SHA384"` |
+| Session resumption | `reused` | `false` |
+| HelloRetryRequest | `hello_retry_requests` | `0` |
+| Directional message lengths | `sent_handshake_bytes`, `received_handshake_bytes` | Client sent = server received, and vice versa |
+
+`reused` means TLS session resumption, not process reuse. Process reuse is identified by `rounds[].mode == "warm"`. Certificate verification here means that the client verifies the server. A zero server-side verification result does not establish client authentication; the experiment is server-authenticated only.
+
+The numeric identifiers are mappings used by this experimental image. Full mappings: [scripts/extended_handshake.py:39–40](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/extended_handshake.py#L39-L40).
+
+```python
+    codes={'X25519':29,'smaug1':65056,'smaug3':65059,'smaug5':65062,'ntruplus_kem576':65064,'ntruplus_kem768':65067,'ntruplus_kem864':65070,'ntruplus_kem1152':65073}
+    sigs={'EC':1027,'haetae2':65408,'haetae3':65409,'haetae5':65410,'aimer128f':65411,'aimer192f':65413,'aimer256f':65415}
+```
+
+The C callback reads the signature from `CertificateVerify` at [scripts/tls_handshake.c:43–47](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/tls_handshake.c#L43-L47) and the group from `ServerHello.key_share` at [scripts/tls_handshake.c:70–76](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/tls_handshake.c#L70-L76). JSON output is implemented at [scripts/tls_handshake.c:196–209](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/tls_handshake.c#L196-L209).
+
+Collection-time checks: [scripts/extended_handshake.py:70–75](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/extended_handshake.py#L70-L75). Here `c` is the client record, `t` the server record, `r` each endpoint in turn, and `k`/`s` the intended KEM/signature names.
+
+```python
+            for i,(c,t) in enumerate(zip(cs,ss)):
+                for r in [c,t]:
+                    assert r['success'] and r['group_code']==codes[k] and r['signature_code']==sigs[s] and not r['reused'] and r['verify_result']==0
+                    assert r['tls_version']=='TLSv1.3' and r['cipher']=='TLS_AES_256_GCM_SHA384' and r['hello_retry_requests']==0
+                    if mode=='memory':assert r['rss_peak_reset_ok'] and r['rss_window_peak_growth_kib']>=0
+                assert c['sent_handshake_bytes']==t['received_handshake_bytes'] and t['sent_handshake_bytes']==c['received_handshake_bytes']
+```
+
+The memory branch belongs to the shared collector; it is not executed in this cold/warm-only run. In the first recorded SMAUG1 + HAETAE2 sample, client-sent/server-received lengths are both 876 bytes; server-sent/client-received lengths are both 5014 bytes. These are handshake message bytes, excluding TCP/IP headers and retransmissions.
+
+### How are 5:5 order balance and paired configuration order checked?
+
+Schedule generation: [scripts/extended_handshake.py:44–52](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/scripts/extended_handshake.py#L44-L52).
+
+```python
+    rng=random.Random(D['random_seed'])
+    schedule=[]
+    if args.balanced:
+        first_modes=['cold']*5+['warm']*5
+        rng.shuffle(first_modes)
+        for block,first in enumerate(first_modes[:1] if args.smoke else first_modes):
+            order=list(pairs);rng.shuffle(order)
+            for mode in [first,'warm' if first=='cold' else 'cold']:
+                schedule.append((mode,block,list(order)))
+```
+
+`first_modes` contains five cold-first and five warm-first blocks, shuffled by the seeded generator. `order` is randomized once per block; both modes receive a copy of the same list. Thus, if a block measures configuration A → B → C, both modes use A → B → C. The full experiment uses all 43 configurations and all ten blocks, without `--smoke`.
+
+The saved schedule and collected records are checked again at [experiments/scripts/analyze_balanced.py:5–18](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/experiments/scripts/analyze_balanced.py#L5-L18).
+
+```python
+d=json.loads(source.read_text());assert d['status']=='passed' and d['cleanup_ok']
+schedule=d['schedule'];assert len(schedule)==20
+assert sum(p['mode']=='cold' for p in schedule[::2])==5
+```
+
+```python
+for a,b in zip(schedule[::2],schedule[1::2]):
+ assert a['block']==b['block'] and a['configuration_order']==b['configuration_order'] and {a['mode'],b['mode']}=={'cold','warm'}
+for plan,block in zip(schedule,d['rounds']):
+ assert (plan['mode'],plan['block'])==(block['mode'],block['block'])
+ profiles=block['profiles']; assert len(profiles)==45 and profiles[0]['sentinel'] and profiles[-1]['sentinel']
+ assert [(p['kem'],p['signature']) for p in profiles[1:-1]]==[tuple(p) for p in plan['configuration_order']]
+```
+
+- `schedule[::2]` selects the first mode of each block and verifies five cold-first blocks.
+- The mode-set check requires one cold and one warm entry per block, implying five warm-first blocks.
+- Equal `configuration_order` lists establish paired ordering.
+- Comparing `profiles[1:-1]` with the plan checks actual collection order, excluding the two boundary sentinels.
+
+Protocol fields and directional bytes are rechecked at [experiments/scripts/analyze_balanced.py:24–30](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/experiments/scripts/analyze_balanced.py#L24-L30); sample counts at [experiments/scripts/analyze_balanced.py:31–35](https://github.com/17seetwice/kpqc-tls-devops-lab/blob/77e0175d812678823b702c4611f68e8d30ec88ef/experiments/scripts/analyze_balanced.py#L31-L35). Code links and line numbers are pinned to the documentation-reference commit. The experiment's original source remains `cfd6bcc`, as stated above.
+
 ## Results
 
 | Condition | X25519 + ECDSA | Range of PQC configuration medians |
