@@ -53,12 +53,42 @@ The first metric checks whether the candidate meets the test service's response 
 | Subsequent update candidate | Represents a service update after KPQC adoption | Server certificate and server process; SMAUG1 + HAETAE2 remains unchanged |
 | Previously approved service | The approved KPQC service used as the recovery target after the subsequent update fails | Route traffic back to this service instead of the failed candidate |
 
-The trial proceeds as follows:
+The trial proceeds as follows. Each step is linked to the code that implements it.
 
-1. Test the initial KPQC candidate while the classical service is active.
-2. If cryptographic, certificate and performance checks pass, switch the active route to the KPQC candidate.
-3. Test and admit a subsequent update with a new certificate and a separate server process.
-4. Inject a failure into the updated service. Recheck the previously approved service's current TLS connectivity, certificate and cryptographic policy, then restore its route.
+1. Create the initial KPQC candidate while the classical service is active. Run TLS probes and three load windows, then ask the policy evaluator for a decision. Implementation: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
+
+   ```python
+   binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
+   q = {"candidate": name, "evidence": evidence, "performance": perf}
+   verdict = worker("server", {"action": "decision", **q})
+   ```
+
+2. If cryptographic, certificate and performance checks pass, switch the candidate to the active route. The promotion action checks the policy again before changing the active-service pointer. Implementation: [`gate_worker.py`](../../../scripts/gate_worker.py#L196-L208).
+
+   ```python
+   decision = main({"action": "decision", **q["evidence"]})
+   if not decision["deployment_allowed"]:
+       raise ValueError("gate did not approve")
+   state["active"] = state["candidate"]
+   state["candidate"] = None
+   ```
+
+3. Test the subsequent update with a new certificate and separate server process through the same creation, probe and admission steps. The existing KPQC service stays available as the recovery target. Implementation: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L63), [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
+
+   ```python
+   binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
+   # Collect TLS and performance evidence for this candidate, then:
+   promotion = worker("server", {"action": "promote", **q})
+   ```
+
+4. Inject a failure into the updated service. Once consecutive failures are detected, check the previous approved service's current TLS state and restore its route. Implementation: [`release_experiments.py`](../../../scripts/release_experiments.py#L75-L87).
+
+   ```python
+   t0 = time.monotonic_ns(); D["fault"] = worker("server", {"action": "fault-active"})
+   target = health("rollback")
+   D["rollback"] = worker("server", {"action": "rollback", "health": target,
+                                      "health_observed_at_ns": time.time_ns()})
+   ```
 
 Both KPQC candidates use SMAUG1 + HAETAE2. This is not an algorithm-update comparison; it models initial KPQC adoption and a later KPQC service update and recovery. Recovery does not return to classical cryptography.
 

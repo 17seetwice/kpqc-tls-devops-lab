@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC migration, deployment admission and recovery</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,sans-serif;color:#182b3a}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccd5dc;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f2f5f7}a{color:#006da8}code{background:#f2f5f7;padding:.1em .3em;border-radius:3px}h1{line-height:1.3}li{margin:.25rem 0}</style>
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC migration, deployment admission and recovery</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,sans-serif;color:#182b3a}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccd5dc;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f2f5f7}a{color:#006da8}code{font-family:ui-monospace,monospace}pre{background:#f3f5f7;padding:16px;overflow:auto;white-space:pre-wrap}pre code{font-size:.92rem}h1{line-height:1.3}li{margin:.25rem 0}</style>
 <h1>KPQC migration, deployment admission and recovery</h1>
 <p><a href="README.html">한국어</a> · <a href="gallery.html">Gallery</a> · <a href="measurements.public.json">Raw records</a> · <a href="audit.json">Audit</a></p>
 <p>This Seoul Region trial moved a service from classical cryptography to KPQC, admitted a later update, and restored the previously approved KPQC service after the new service failed. The <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708">GitHub Actions run</a> passed 24 checks. After the run, both EC2 instances were stopped and the temporary SSH ingress rule was removed.</p>
@@ -39,13 +39,34 @@
 <tr><td>Subsequent update candidate</td><td>Represents a service update after KPQC adoption</td><td>Server certificate and server process; SMAUG1 + HAETAE2 remains unchanged</td></tr>
 <tr><td>Previously approved service</td><td>The approved KPQC service used as the recovery target after the subsequent update fails</td><td>Route traffic back to this service instead of the failed candidate</td></tr>
 </tbody></table>
-<p>The trial proceeds as follows:</p>
+<p>The trial proceeds as follows. Each step is linked to the code that implements it.</p>
 <ol>
-<li>Test the initial KPQC candidate while the classical service is active.</li>
-<li>If cryptographic, certificate and performance checks pass, switch the active route to the KPQC candidate.</li>
-<li>Test and admit a subsequent update with a new certificate and a separate server process.</li>
-<li>Inject a failure into the updated service. Recheck the previously approved service&#x27;s current TLS connectivity, certificate and cryptographic policy, then restore its route.</li>
+<li>Create the initial KPQC candidate while the classical service is active. Run TLS probes and three load windows, then ask the policy evaluator for a decision. Implementation: <a href="../../../scripts/release_experiments.py#L41-L51">`release_experiments.py`</a>.</li>
 </ol>
+<pre><code class="language-python">binding = worker(&quot;server&quot;, {&quot;action&quot;: &quot;candidate&quot;, &quot;name&quot;: name})[&quot;route&quot;][&quot;candidate&quot;]
+q = {&quot;candidate&quot;: name, &quot;evidence&quot;: evidence, &quot;performance&quot;: perf}
+verdict = worker(&quot;server&quot;, {&quot;action&quot;: &quot;decision&quot;, **q})</code></pre>
+<ol>
+<li>If cryptographic, certificate and performance checks pass, switch the candidate to the active route. The promotion action checks the policy again before changing the active-service pointer. Implementation: <a href="../../../scripts/gate_worker.py#L196-L208">`gate_worker.py`</a>.</li>
+</ol>
+<pre><code class="language-python">decision = main({&quot;action&quot;: &quot;decision&quot;, **q[&quot;evidence&quot;]})
+if not decision[&quot;deployment_allowed&quot;]:
+    raise ValueError(&quot;gate did not approve&quot;)
+state[&quot;active&quot;] = state[&quot;candidate&quot;]
+state[&quot;candidate&quot;] = None</code></pre>
+<ol>
+<li>Test the subsequent update with a new certificate and separate server process through the same creation, probe and admission steps. The existing KPQC service stays available as the recovery target. Implementation: <a href="../../../scripts/release_experiments.py#L41-L63">`release_experiments.py`</a>, <a href="../../../scripts/gate_worker.py#L162-L175">`gate_worker.py`</a>.</li>
+</ol>
+<pre><code class="language-python">binding = worker(&quot;server&quot;, {&quot;action&quot;: &quot;candidate&quot;, &quot;name&quot;: name})[&quot;route&quot;][&quot;candidate&quot;]
+# Collect TLS and performance evidence for this candidate, then:
+promotion = worker(&quot;server&quot;, {&quot;action&quot;: &quot;promote&quot;, **q})</code></pre>
+<ol>
+<li>Inject a failure into the updated service. Once consecutive failures are detected, check the previous approved service&#x27;s current TLS state and restore its route. Implementation: <a href="../../../scripts/release_experiments.py#L75-L87">`release_experiments.py`</a>.</li>
+</ol>
+<pre><code class="language-python">t0 = time.monotonic_ns(); D[&quot;fault&quot;] = worker(&quot;server&quot;, {&quot;action&quot;: &quot;fault-active&quot;})
+target = health(&quot;rollback&quot;)
+D[&quot;rollback&quot;] = worker(&quot;server&quot;, {&quot;action&quot;: &quot;rollback&quot;, &quot;health&quot;: target,
+                                   &quot;health_observed_at_ns&quot;: time.time_ns()})</code></pre>
 <p>Both KPQC candidates use SMAUG1 + HAETAE2. This is not an algorithm-update comparison; it models initial KPQC adoption and a later KPQC service update and recovery. Recovery does not return to classical cryptography.</p>
 <h2>Candidate admission results</h2>
 <p>All candidates passed the cryptographic checks. To verify that the performance gate rejects a slow candidate, a 350 ms delay was injected before TLS processing. This is an intentional performance-regression condition, not the intrinsic processing time of the KPQC algorithms.</p>

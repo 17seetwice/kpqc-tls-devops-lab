@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC 전환·배포 승인·장애 복구</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,sans-serif;color:#182b3a}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccd5dc;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f2f5f7}a{color:#006da8}code{background:#f2f5f7;padding:.1em .3em;border-radius:3px}h1{line-height:1.3}li{margin:.25rem 0}</style>
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC 전환·배포 승인·장애 복구</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,sans-serif;color:#182b3a}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccd5dc;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f2f5f7}a{color:#006da8}code{font-family:ui-monospace,monospace}pre{background:#f3f5f7;padding:16px;overflow:auto;white-space:pre-wrap}pre code{font-size:.92rem}h1{line-height:1.3}li{margin:.25rem 0}</style>
 <h1>KPQC 전환·배포 승인·장애 복구</h1>
 <p><a href="README.en.html">English</a> · <a href="gallery.html">그림 모음</a> · <a href="measurements.public.json">원자료</a> · <a href="audit.json">검증 요약</a></p>
 <p>서울 리전의 시험 환경에서 기존 고전 암호 서비스에서 KPQC 서비스로 전환하고, 후속 업데이트를 승인한 뒤 새 서비스 장애 시 이전에 승인한 KPQC 서비스로 복구하는 절차를 시험했다. GitHub Actions 실행은 <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708">여기</a>에서 확인할 수 있다. 24개 검증 항목이 통과했고, 실행 후 두 EC2 인스턴스가 중지되고 임시 SSH 인바운드 규칙이 제거됐다.</p>
@@ -41,11 +41,32 @@
 </tbody></table>
 <p>실험 흐름은 다음과 같다.</p>
 <ol>
-<li>고전 암호 서비스가 동작하는 상태에서 최초 KPQC 배포 후보를 검사한다.</li>
-<li>암호·인증서·성능 기준을 모두 만족하면 KPQC 후보를 활성 경로로 전환한다.</li>
-<li>새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보를 검사하고 승인한다.</li>
-<li>후속 업데이트 서비스에 장애를 주입한다. 이전 승인 서비스의 현재 TLS 접속, 인증서, 암호 정책을 다시 확인한 뒤 그 서비스로 경로를 복구한다.</li>
+<li>고전 암호 서비스가 동작하는 상태에서 최초 KPQC 배포 후보를 만든다. 실제 TLS 접속 시험과 3개 부하 구간을 수행하고, 정책 판정기를 호출한다. 구현: <a href="../../../scripts/release_experiments.py#L41-L51">`release_experiments.py`</a>.</li>
 </ol>
+<pre><code class="language-python">binding = worker(&quot;server&quot;, {&quot;action&quot;: &quot;candidate&quot;, &quot;name&quot;: name})[&quot;route&quot;][&quot;candidate&quot;]
+q = {&quot;candidate&quot;: name, &quot;evidence&quot;: evidence, &quot;performance&quot;: perf}
+verdict = worker(&quot;server&quot;, {&quot;action&quot;: &quot;decision&quot;, **q})</code></pre>
+<ol>
+<li>암호·인증서·성능 기준을 모두 만족하면 후보를 활성 경로로 전환한다. 승격 때 정책을 다시 확인한 다음 활성 서비스 경로를 바꾼다. 구현: <a href="../../../scripts/gate_worker.py#L196-L208">`gate_worker.py`</a>.</li>
+</ol>
+<pre><code class="language-python">decision = main({&quot;action&quot;: &quot;decision&quot;, **q[&quot;evidence&quot;]})
+if not decision[&quot;deployment_allowed&quot;]:
+    raise ValueError(&quot;gate did not approve&quot;)
+state[&quot;active&quot;] = state[&quot;candidate&quot;]
+state[&quot;candidate&quot;] = None</code></pre>
+<ol>
+<li>새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보도 같은 생성·검사·승인 절차를 거친다. 이때 기존 KPQC 서비스는 활성 경로에 남아 복구 대상으로 유지된다. 구현: <a href="../../../scripts/release_experiments.py#L41-L63">`release_experiments.py`</a>, <a href="../../../scripts/gate_worker.py#L162-L175">`gate_worker.py`</a>.</li>
+</ol>
+<pre><code class="language-python">binding = worker(&quot;server&quot;, {&quot;action&quot;: &quot;candidate&quot;, &quot;name&quot;: name})[&quot;route&quot;][&quot;candidate&quot;]
+# 후보별 TLS·성능 증적을 모아 decision을 계산한 뒤
+promotion = worker(&quot;server&quot;, {&quot;action&quot;: &quot;promote&quot;, **q})</code></pre>
+<ol>
+<li>후속 업데이트 서비스에 장애를 주입한다. 연속 실패를 감지하면 이전 승인 서비스의 현재 TLS 상태를 확인하고 그 서비스로 경로를 복구한다. 구현: <a href="../../../scripts/release_experiments.py#L75-L87">`release_experiments.py`</a>.</li>
+</ol>
+<pre><code class="language-python">t0 = time.monotonic_ns(); D[&quot;fault&quot;] = worker(&quot;server&quot;, {&quot;action&quot;: &quot;fault-active&quot;})
+target = health(&quot;rollback&quot;)
+D[&quot;rollback&quot;] = worker(&quot;server&quot;, {&quot;action&quot;: &quot;rollback&quot;, &quot;health&quot;: target,
+                                   &quot;health_observed_at_ns&quot;: time.time_ns()})</code></pre>
 <p>최초 후보와 후속 후보는 모두 SMAUG1 + HAETAE2를 사용한다. 이 시험은 알고리즘 업데이트 비교가 아니라 최초 KPQC 도입과 KPQC 서비스 갱신·복구 절차를 각각 모사한다. 복구 후에도 고전 암호 서비스로 돌아가지 않는다.</p>
 <h2>후보 승인 결과</h2>
 <p>모든 후보가 암호 검사를 통과했다. 성능 게이트가 느린 후보를 거절하는지 확인하기 위해 지연 주입 후보의 TLS 처리 전에 350 ms 대기를 넣었다. 이는 의도적으로 만든 성능 회귀 조건이며 KPQC 암호 자체의 처리 시간은 아니다.</p>

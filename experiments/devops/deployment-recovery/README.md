@@ -55,10 +55,40 @@ SLO (Service Level Objective)는 시험 전에 정한 서비스 응답 목표다
 
 실험 흐름은 다음과 같다.
 
-1. 고전 암호 서비스가 동작하는 상태에서 최초 KPQC 배포 후보를 검사한다.
-2. 암호·인증서·성능 기준을 모두 만족하면 KPQC 후보를 활성 경로로 전환한다.
-3. 새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보를 검사하고 승인한다.
-4. 후속 업데이트 서비스에 장애를 주입한다. 이전 승인 서비스의 현재 TLS 접속, 인증서, 암호 정책을 다시 확인한 뒤 그 서비스로 경로를 복구한다.
+1. 고전 암호 서비스가 동작하는 상태에서 최초 KPQC 배포 후보를 만든다. 실제 TLS 접속 시험과 3개 부하 구간을 수행하고, 정책 판정기를 호출한다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
+
+   ```python
+   binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
+   q = {"candidate": name, "evidence": evidence, "performance": perf}
+   verdict = worker("server", {"action": "decision", **q})
+   ```
+
+2. 암호·인증서·성능 기준을 모두 만족하면 후보를 활성 경로로 전환한다. 승격 때 정책을 다시 확인한 다음 활성 서비스 경로를 바꾼다. 구현: [`gate_worker.py`](../../../scripts/gate_worker.py#L196-L208).
+
+   ```python
+   decision = main({"action": "decision", **q["evidence"]})
+   if not decision["deployment_allowed"]:
+       raise ValueError("gate did not approve")
+   state["active"] = state["candidate"]
+   state["candidate"] = None
+   ```
+
+3. 새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보도 같은 생성·검사·승인 절차를 거친다. 이때 기존 KPQC 서비스는 활성 경로에 남아 복구 대상으로 유지된다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L63), [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
+
+   ```python
+   binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
+   # 후보별 TLS·성능 증적을 모아 decision을 계산한 뒤
+   promotion = worker("server", {"action": "promote", **q})
+   ```
+
+4. 후속 업데이트 서비스에 장애를 주입한다. 연속 실패를 감지하면 이전 승인 서비스의 현재 TLS 상태를 확인하고 그 서비스로 경로를 복구한다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L75-L87).
+
+   ```python
+   t0 = time.monotonic_ns(); D["fault"] = worker("server", {"action": "fault-active"})
+   target = health("rollback")
+   D["rollback"] = worker("server", {"action": "rollback", "health": target,
+                                      "health_observed_at_ns": time.time_ns()})
+   ```
 
 최초 후보와 후속 후보는 모두 SMAUG1 + HAETAE2를 사용한다. 이 시험은 알고리즘 업데이트 비교가 아니라 최초 KPQC 도입과 KPQC 서비스 갱신·복구 절차를 각각 모사한다. 복구 후에도 고전 암호 서비스로 돌아가지 않는다.
 
