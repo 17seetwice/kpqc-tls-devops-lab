@@ -14,7 +14,7 @@
 
 `devops/`에는 암호 정책 게이트와 정책 기반 배포·장애 복구 시험이 있습니다.
 
-- [암호 정책 게이트 공개 증적](devops/gate-evidence/gate.public.json)
+- [암호 정책 후보 시험 결과: TLS 관측값·판정·증적 오류 검사](devops/gate-evidence/gate.public.json)
 - [전환·성능 승인·장애 복구](devops/deployment-recovery/README.md) · [English](devops/deployment-recovery/README.en.md)
 - 네트워크 보고서의 [부하 중 배포 전환](performance/network-and-load/README.md#4-부하-중-배포-전환)은 성능 측정과 별도로 해석해야 하는 배포 시험 항목입니다.
 

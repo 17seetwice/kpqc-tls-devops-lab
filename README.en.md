@@ -132,7 +132,7 @@ These are standalone measurements of TLS timing, resource use and network effect
 
 These experiments connect actual TLS probes and performance targets to deployment decisions, then exercise automated rollout and recovery.
 
-- Cryptographic gate: require TLS 1.3/SMAUG1/HAETAE2 connections and reject classical-only or TLS 1.2 probes. Reject a candidate that also accepts X25519, even if its KPQC connection succeeds. Pass 63 assertions, including evidence checks.
+- Cryptographic-policy candidate tests: verify that TLS 1.3/SMAUG1/HAETAE2 is negotiated, classical-only and TLS 1.2 probes are rejected, and faulty evidence is rejected. The 63 checks cover candidate decisions and their reasons. Per-run results are in [`gate.public.json`](experiments/devops/gate-evidence/gate.public.json).
 - Performance admission: test each candidate at 10 arrivals/s for three 10-second windows. Check failure rate, completion within 200 ms, p95 and generator lateness. Admit two normal candidates; reject the 350 ms injected-delay candidate despite successful cryptographic checks. Each candidate completed 300 TLS connections.
 - Deployment under load and recovery: the retest recorded zero failures among 24,504 connections. A separate process-failure trial verified recovery in 2.951 s, with 21 failures among 150 attempts during the fault window.
 - Automation: GitHub Actions connects build, tests, AWS execution, evidence collection and cleanup. The final run passed 63 cryptographic-policy and 24 migration/admission/recovery assertions; EC2 shutdown and temporary SSH rule removal were confirmed. [Execution record](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
@@ -226,7 +226,7 @@ kpqc-tls-devops-lab/
 │   │   ├── process-reuse/   process-condition comparison
 │   │   └── network-and-load/ network and load trials
 │   └── devops/              policy-based deployment and recovery
-│       ├── gate-evidence/   cryptographic gate evidence
+│       ├── gate-evidence/   candidate TLS checks and decisions (JSON)
 │       └── deployment-recovery/ migration, admission and recovery
 ├── docs/                    setup guides and walkthrough
 ├── Dockerfile.gate          KPQC test image
@@ -245,7 +245,7 @@ kpqc-tls-devops-lab/
 
 Experiments have different environments and measurement boundaries; consult each report's conditions and execution records. Download the repository to open HTML reports and galleries in a browser.
 
-Evidence entry points: [initial summary CSV](experiments/performance/initial/data/summary.csv), [process-condition comparison summary CSV](experiments/performance/process-reuse/summary.csv), [cryptographic-gate records](experiments/devops/gate-evidence/gate.public.json) and [final deployment raw records](experiments/devops/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/performance/initial/gallery.html), [process-condition comparison](experiments/performance/process-reuse/gallery.html), [network/load](experiments/performance/network-and-load/gallery.html) and [deployment/recovery](experiments/devops/deployment-recovery/gallery.html).
+Evidence entry points: [initial summary CSV](experiments/performance/initial/data/summary.csv), [process-condition comparison summary CSV](experiments/performance/process-reuse/summary.csv), [cryptographic-policy candidate test results](experiments/devops/gate-evidence/gate.public.json) and [final deployment raw records](experiments/devops/deployment-recovery/measurements.public.json). `gate.public.json` records observed TLS connections, each candidate's admission decision and reasons, and checks for faulty or mismatched evidence. Figure galleries cover [initial measurements](experiments/performance/initial/gallery.html), [process-condition comparison](experiments/performance/process-reuse/gallery.html), [network/load](experiments/performance/network-and-load/gallery.html) and [deployment/recovery](experiments/devops/deployment-recovery/gallery.html).
 
 Re-evaluate the public deployment records without running AWS. Run from the repository root; the command writes an audit summary to the specified directory.
 

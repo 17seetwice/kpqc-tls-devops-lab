@@ -132,7 +132,7 @@ docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scri
 
 이 항목은 실제 연결 검사와 성능 기준을 배포 결정에 연결하고, 자동화된 전환·복구 절차를 확인합니다.
 
-- 암호 정책 게이트: TLS 1.3·SMAUG1·HAETAE2 연결은 허용하고 고전 암호 또는 TLS 1.2만 사용하는 접속은 거절하는지 검사했습니다. KPQC 연결이 성공해도 X25519 접속까지 허용하는 후보는 거절했습니다. 증적 검사 등을 포함한 63개 검증 항목을 통과했습니다.
+- 암호 정책 후보 시험: 실제 협상에서 TLS 1.3·SMAUG1·HAETAE2가 선택되는지, 고전 암호 접속이나 TLS 1.2 접속을 허용하지 않는지 확인했습니다. 후보별 승인·거절 사유와 잘못된 증적을 거절하는지까지 63개 항목으로 검사했습니다. 실행별 상세 결과는 [`gate.public.json`](experiments/devops/gate-evidence/gate.public.json)에 있습니다.
 - 성능 승인: 후보별 초당 10회씩 10초 × 3구간 동안 실패율·200ms 내 성공률·p95·부하 생성 지연을 검사했습니다. 정상 후보 두 개는 승인하고, 350ms 지연 주입 후보는 암호 검사를 통과했지만 성능 기준 위반으로 거절했습니다. 각 후보에서 TLS 연결 300회가 성공했습니다.
 - 부하 중 전환·장애 복구: 전환 재시험에서 24,504회 중 실패 0회였습니다. 별도 프로세스 장애 시험에서는 2.951초 후 복구를 확인했으며, 장애 구간 150회 중 21회는 실패했습니다.
 - 실행 자동화: GitHub Actions가 빌드·시험·AWS 실행·증적 저장·정리를 연결했습니다. 최종 실행에서 암호 정책 63개 및 전환·성능 승인·복구 24개 항목을 통과했고, EC2 중지와 임시 SSH 규칙 제거를 확인했습니다. [실행 기록](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)
@@ -207,7 +207,7 @@ SLO (Service Level Objective)는 시험 전에 고정한 모의 서비스 목표
 
 GitHub Actions는 이미지 빌드·로컬 시험 후 OIDC (OpenID Connect)로 AWS 단기 권한을 얻고, SSH (Secure Shell)로 기존 서버·클라이언트에 동일 이미지를 배포합니다. 실행 후 증적을 저장하고 두 EC2를 중지하며 임시 SSH 규칙을 제거합니다. push CI는 EC2를 시작하지 않습니다.
 
-[이번 AWS 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)에서 기존 암호 정책 검증 63개, 전환·성능 승인·복구 검증 24개를 통과했습니다. 실험 소스는 `c232f7d`이며 후속 문서·CI 수정과 구분합니다. EC2 두 대의 중지는 워크플로와 별도 AWS 조회로 확인했습니다.
+[이번 AWS 실행](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708)에서 암호 정책 후보 시험 63개 항목과 전환·성능 승인·복구 시험 24개 항목이 기대한 결과를 냈습니다. 실험 소스는 `c232f7d`이며 후속 문서·CI 수정과 구분합니다. EC2 두 대의 중지는 워크플로와 별도 AWS 조회로 확인했습니다.
 
 ## 디렉터리 구성
 
@@ -226,7 +226,7 @@ kpqc-tls-devops-lab/
 │   │   ├── process-reuse/   프로세스 조건 비교
 │   │   └── network-and-load/ 네트워크·부하 시험
 │   └── devops/              정책 기반 배포·복구
-│       ├── gate-evidence/   암호 정책 게이트 증적
+│       ├── gate-evidence/   후보별 암호 접속 검사·판정 결과(JSON)
 │       └── deployment-recovery/ 전환·승인·장애 복구
 ├── docs/                    설정·실험 설명
 ├── Dockerfile.gate          KPQC 시험 이미지
@@ -245,7 +245,7 @@ kpqc-tls-devops-lab/
 
 각 실험은 환경과 측정 구간이 다르므로 개별 보고서의 조건과 실행 기록을 따릅니다. HTML 보고서와 그림 모음은 저장소를 내려받아 브라우저로 열 수 있습니다.
 
-원자료부터 확인하려면 [초기 집계 CSV](experiments/performance/initial/data/summary.csv), [균형화 집계 CSV](experiments/performance/process-reuse/summary.csv), [암호 정책 시험 기록](experiments/devops/gate-evidence/gate.public.json), [최종 배포 원자료](experiments/devops/deployment-recovery/measurements.public.json)를 참고하세요. 그래프는 [초기 측정](experiments/performance/initial/gallery.html)·[균형화](experiments/performance/process-reuse/gallery.html)·[네트워크·부하](experiments/performance/network-and-load/gallery.html)·[배포·복구](experiments/devops/deployment-recovery/gallery.html)별로 제공합니다.
+원자료부터 확인하려면 [초기 집계 CSV](experiments/performance/initial/data/summary.csv), [균형화 집계 CSV](experiments/performance/process-reuse/summary.csv), [암호 정책 후보 시험 결과](experiments/devops/gate-evidence/gate.public.json), [최종 배포 원자료](experiments/devops/deployment-recovery/measurements.public.json)를 참고하세요. `gate.public.json`에는 후보별 실제 TLS 접속 관측값, 승인·거절 판정과 사유, 증적 오류 검사 결과가 기록되어 있습니다. 그래프는 [초기 측정](experiments/performance/initial/gallery.html)·[균형화](experiments/performance/process-reuse/gallery.html)·[네트워크·부하](experiments/performance/network-and-load/gallery.html)·[배포·복구](experiments/devops/deployment-recovery/gallery.html)별로 제공합니다.
 
 공개 배포 원자료의 판정과 수치를 AWS 실행 없이 다시 검증할 수 있습니다. 저장소 루트에서 실행하면 지정한 경로에 검증 요약이 생성됩니다.
 
