@@ -1,61 +1,81 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC release lifecycle</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.75 system-ui;color:#182b3a}img{max-width:100%}table{border-collapse:collapse;display:block;overflow:auto}th,td{border:1px solid #ccd5dc;padding:8px}a{color:#006da8}pre{overflow:auto}h1{line-height:1.4}</style><h1>KPQC migration, performance admission and recovery</h1>
-<p><a href="README.html">한국어</a> · <a href="gallery.html">Gallery</a> · <a href="measurements.public.json">Raw evidence</a> · <a href="audit.json">Audit</a></p>
-<p>The existing TLS measurement and cryptographic gate now form one lifecycle: <strong>classical-to-KPQC migration, performance admission, and automatic recovery to an approved KPQC version</strong>. <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708">GitHub Actions execution</a>, source <code>c232f7d</code>; 24 assertions passed. The workflow confirmed that both existing EC2 instances stopped and temporary SSH ingress was removed.</p>
-<h2>Environment and preregistered target</h2>
-<p><img alt="Release lifecycle" src="architecture.en.png" /></p>
-<p>Two m7i.large instances in the same Seoul availability zone; each container has 2 CPUs/512 MiB, a Docker bridge and MTU (Maximum Transmission Unit) 1500. The original service uses X25519 + ECDSA P-256; candidates use SMAUG1 + HAETAE2. The initial KPQC release and subsequent update use the same algorithms, with distinct certificates and server processes. Full TLS (Transport Layer Security) 1.3 handshakes, directly trusted server certificates and migration-capable clients are assumed.</p>
-<p>The SLO (Service Level Objective) is a <strong>synthetic service target</strong>, fixed before testing. Each candidate receives 10 scheduled arrivals/s for three 10-second windows. Every window must have ≤1% failed attempts, ≥99% successful completions within 200 ms, and successful completion p95 ≤200 ms. Generator-lateness p95 &gt;50 ms or incomplete evidence prevents admission.</p>
-<p>Completion latency runs from scheduled arrival to C-client process exit, including scheduling, initialization, TCP, readiness, TLS and teardown. Separately recorded TLS latency covers only <code>SSL_connect</code>. There is no HTTP or business transaction. Every scheduled attempt remains in the denominator.</p>
-<h2>Deployment roles and experiment sequence</h2>
-<p>The <strong>initial KPQC deployment candidate</strong> replaces the existing X25519 + ECDSA P-256 service with SMAUG1 + HAETAE2. It replaces the active service only after passing cryptographic, certificate and performance checks.</p>
-<p>The <strong>subsequent update candidate</strong> models a service update after KPQC adoption. It retains SMAUG1 + HAETAE2 and uses a new server certificate and a separate server process. This experiment changes the certificate and deployment target; it does not change the cryptographic algorithms or business functionality.</p>
-<p>After approving and deploying the update, the experiment injects a failure into the newly deployed service. The service accepted during initial KPQC deployment is now the <strong>previously approved service</strong>. Its current TLS connectivity, certificate and cryptographic policy are checked before routing connections back to it. The two stages test <strong>initial KPQC adoption</strong> and <strong>subsequent update and recovery</strong>, respectively, while retaining KPQC after recovery.</p>
-<h2>Candidate admission</h2>
-<p>All candidates passed cryptographic checks. The faulted candidate intentionally waits 350 ms before server TLS processing. This validates regression detection and is not intrinsic KPQC cost. Each value below is successful completion p95(ms) from one 100-arrival window.</p>
-<table>
-<thead>
-<tr>
-<th>Candidate</th>
-<th>Crypto check</th>
-<th>Final decision</th>
-<th>Three window p95 values(ms)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Injected-delay candidate</td>
-<td>Pass</td>
-<td>Reject</td>
-<td>382.56, 382.46, 381.96</td>
-</tr>
-<tr>
-<td>Initial KPQC candidate</td>
-<td>Pass</td>
-<td>Admit</td>
-<td>32.99, 33.19, 33.28</td>
-</tr>
-<tr>
-<td>Subsequent update candidate</td>
-<td>Pass</td>
-<td>Admit</td>
-<td>33.20, 32.56, 32.74</td>
-</tr>
-</tbody>
-</table>
-<p><img alt="Performance admission" src="en/01-admission.png" /></p>
-<p>The slow candidate could not be promoted; the classical service remained active. The approved initial KPQC release then replaced it, verified through the actual certificate and negotiated codes. The subsequent update was also admitted. Performance evidence is bound to the candidate generation, certificate and policy and re-evaluated at promotion.</p>
-<h2>Failure and automatic recovery</h2>
-<p>After terminating the newly deployed server process group, two consecutive failed health observations trigger validation and restoration of the previously approved deployment. Classical targets, incorrect certificates and stale health evidence are rejected.</p>
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC migration, deployment admission and recovery</title><style>body{max-width:1100px;margin:32px auto;padding:0 24px;font:16px/1.7 system-ui,sans-serif;color:#182b3a}img{max-width:100%;height:auto}table{border-collapse:collapse;width:100%;margin:1rem 0}th,td{border:1px solid #ccd5dc;padding:8px 10px;text-align:left;vertical-align:top}th{background:#f2f5f7}a{color:#006da8}code{background:#f2f5f7;padding:.1em .3em;border-radius:3px}h1{line-height:1.3}li{margin:.25rem 0}</style>
+<h1>KPQC migration, deployment admission and recovery</h1>
+<p><a href="README.html">한국어</a> · <a href="gallery.html">Gallery</a> · <a href="measurements.public.json">Raw records</a> · <a href="audit.json">Audit</a></p>
+<p>This Seoul Region trial moved a service from classical cryptography to KPQC, admitted a later update, and restored the previously approved KPQC service after the new service failed. The <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708">GitHub Actions run</a> passed 24 checks. After the run, both EC2 instances were stopped and the temporary SSH ingress rule was removed.</p>
+<h2>Test environment</h2>
+<p><img alt="Deployment lifecycle" src="architecture.en.png"></p>
+<table><thead><tr><th>Item</th><th>Setup</th></tr></thead><tbody>
+<tr><td>AWS location</td><td>Seoul Region, same Availability Zone</td></tr>
+<tr><td>Compute</td><td>Two <code>m7i.large</code> EC2 instances: one TLS server and one test client</td></tr>
+<tr><td>Container limits</td><td>2 CPUs and 512 MiB memory per container</td></tr>
+<tr><td>Container network</td><td>Docker bridge; MTU (Maximum Transmission Unit, maximum network-packet size) 1500 bytes</td></tr>
+<tr><td>TLS</td><td>TLS (Transport Layer Security) 1.3, full handshake on every attempt</td></tr>
+<tr><td>Certificate</td><td>The client directly trusts the test server certificate and checks its name</td></tr>
+<tr><td>Client</td><td>Prepared test client that can switch cryptographic settings</td></tr>
+</tbody></table>
+<table><thead><tr><th>Service state</th><th>Key exchange + certificate signature</th></tr></thead><tbody>
+<tr><td>Existing service</td><td>X25519 + ECDSA P-256</td></tr>
+<tr><td>KPQC service</td><td>SMAUG1 + HAETAE2</td></tr>
+</tbody></table>
+<h2>Admission criteria and timing metrics</h2>
+<p>The SLO (Service Level Objective) is a service-response target set before the trial. Each candidate is tested with the same load and criteria.</p>
+<table><thead><tr><th>Criterion</th><th>Pass condition</th></tr></thead><tbody>
+<tr><td>Load</td><td>10 scheduled attempts/s, three 10-second windows (300 scheduled attempts per candidate)</td></tr>
+<tr><td>Failure rate</td><td>At most 1% in each window</td></tr>
+<tr><td>Timely success</td><td>At least 99% of scheduled attempts complete successfully within 200 ms in each window</td></tr>
+<tr><td>Successful completion p95</td><td>At most 200 ms in each window</td></tr>
+<tr><td>Load-generator lateness p95</td><td>At most 50 ms; exceeding it blocks admission</td></tr>
+<tr><td>Evidence</td><td>Missing or candidate-mismatched evidence blocks admission</td></tr>
+</tbody></table>
+<p>Two different durations are recorded:</p>
+<table><thead><tr><th>Metric</th><th>Start and end</th><th>Included work</th></tr></thead><tbody>
+<tr><td>Connection completion latency (used for deployment SLO)</td><td>Scheduled arrival time to C-client process exit</td><td>Scheduling delay, process startup and initialization, TCP connection, readiness signal, TLS handshake and shutdown</td></tr>
+<tr><td>TLS handshake latency (reported separately)</td><td>Immediately before <code>SSL_connect</code> to its return</td><td>The TLS handshake call interval</td></tr>
+</tbody></table>
+<p>The first metric checks whether the candidate meets the test service&#x27;s response target. The second measures only the TLS call interval. Neither includes an HTTP request or a financial business transaction.</p>
+<h2>Candidate roles and sequence</h2>
+<table><thead><tr><th>Stage</th><th>Meaning</th><th>What changes in this trial</th></tr></thead><tbody>
+<tr><td>Initial KPQC deployment candidate</td><td>First candidate to replace the existing X25519 + ECDSA P-256 service with KPQC</td><td>Cryptographic configuration and server certificate</td></tr>
+<tr><td>Subsequent update candidate</td><td>Represents a service update after KPQC adoption</td><td>Server certificate and server process; SMAUG1 + HAETAE2 remains unchanged</td></tr>
+<tr><td>Previously approved service</td><td>The approved KPQC service used as the recovery target after the subsequent update fails</td><td>Route traffic back to this service instead of the failed candidate</td></tr>
+</tbody></table>
+<p>The trial proceeds as follows:</p>
+<ol>
+<li>Test the initial KPQC candidate while the classical service is active.</li>
+<li>If cryptographic, certificate and performance checks pass, switch the active route to the KPQC candidate.</li>
+<li>Test and admit a subsequent update with a new certificate and a separate server process.</li>
+<li>Inject a failure into the updated service. Recheck the previously approved service&#x27;s current TLS connectivity, certificate and cryptographic policy, then restore its route.</li>
+</ol>
+<p>Both KPQC candidates use SMAUG1 + HAETAE2. This is not an algorithm-update comparison; it models initial KPQC adoption and a later KPQC service update and recovery. Recovery does not return to classical cryptography.</p>
+<h2>Candidate admission results</h2>
+<p>All candidates passed the cryptographic checks. To verify that the performance gate rejects a slow candidate, a 350 ms delay was injected before TLS processing. This is an intentional performance-regression condition, not the intrinsic processing time of the KPQC algorithms.</p>
+<p>The values below are successful connection-completion p95 values for each 10-second window. Each window scheduled 100 attempts.</p>
+<table><thead><tr><th>Candidate</th><th>Crypto check</th><th>Performance decision</th><th>Completion p95 by window (ms)</th></tr></thead><tbody>
+<tr><td>Injected-delay candidate</td><td>Pass</td><td>Reject</td><td>382.56 · 382.46 · 381.96</td></tr>
+<tr><td>Initial KPQC deployment candidate</td><td>Pass</td><td>Admit</td><td>32.99 · 33.19 · 33.28</td></tr>
+<tr><td>Subsequent update candidate</td><td>Pass</td><td>Admit</td><td>33.20 · 32.56 · 32.74</td></tr>
+</tbody></table>
+<p><img alt="Candidate performance admission" src="en/01-admission.png"></p>
+<p>The delayed candidate passed cryptographic checks but exceeded the response target, so it was rejected. After the initial KPQC candidate was admitted, the active route&#x27;s server certificate and negotiated values were checked. The subsequent update passed the same checks. Performance evidence is bound to the candidate, certificate and policy identifiers and checked again at activation.</p>
+<h2>Failure recovery results</h2>
+<p>The server-process group deployed by the subsequent update was stopped. After two consecutive failed health observations, the controller checked the previously approved KPQC service&#x27;s connectivity, certificate, policy and approval record, then restored its route. A classical service, a different certificate or stale recovery evidence was not accepted as a recovery target.</p>
+<table><thead><tr><th>Observation</th><th>Result</th></tr></thead><tbody>
+<tr><td>Failure-injection request to detection</td><td>1.596 s</td></tr>
+<tr><td>Failure-injection request to first successful connection after recovery</td><td>2.951 s (pre-set target: within 10 s)</td></tr>
+<tr><td>Scheduled attempts during failure observation</td><td>150</td></tr>
+<tr><td>Failed attempts</td><td>21</td></tr>
+<tr><td>Successful connections to the new deployment</td><td>23</td></tr>
+<tr><td>Successful connections to the restored previous service</td><td>106</td></tr>
+<tr><td>Final attempts</td><td>All 20 connected successfully to the previously approved service</td></tr>
+</tbody></table>
+<p><img alt="Automatic recovery" src="en/02-recovery.png"></p>
+<p>Recovery time uses the controller&#x27;s monotonic clock and includes SSH control round trips. The 21 failures during the incident remain in the results. This does not demonstrate zero downtime. Existing TCP-session or financial-transaction continuity was not tested.</p>
+<h2>Implementation checks and scope</h2>
 <ul>
-<li>Injection request to detection: <strong>1.596s</strong>.</li>
-<li>Injection request to first verified recovery: <strong>2.951s</strong>, against a 10-second target.</li>
-<li>150 scheduled fault-window attempts: <strong>21 failures</strong>, 23 successful connections to the new deployment, 106 successful connections to the restored previous deployment.</li>
-<li>The final 20 attempts succeeded on the restored previous deployment; cryptographic policy and prohibited-client rejection were checked again.</li>
+<li>A server-worker exit after an idle <code>accept</code> timeout was fixed. Eight workers and a successful connection were confirmed after 17 seconds idle.</li>
+<li>The previously approved service remained available as a recovery target while the next candidate was tested.</li>
+<li>A Mac amd64-emulation preflight that rejected a healthy candidate when 2 of 100 attempts exceeded 200 ms is preserved separately. The target was not changed; native Linux preflight and AWS execution were kept separate.</li>
+<li>These results describe one bounded AWS trial. They do not establish maximum throughput, banking-service SLOs, long-term availability or automatic source-code transformation.</li>
 </ul>
-<p><img alt="Automatic recovery" src="en/02-recovery.png" /></p>
-<p>Recovery uses one controller monotonic clock and includes SSH control round trips. Failed attempts are retained. This is not a zero-downtime or transaction-preservation claim.</p>
-<h2>Implementation and scope</h2>
-<p>Idle accept-timeout exits in the prefork server were fixed; all eight workers and a successful connection were checked after 17 seconds idle. The former approved service stayed available while the next candidate was measured.</p>
-<p>An earlier full Mac amd64-emulation trial rejected a healthy candidate because 2/100 attempts exceeded 200 ms. That failed trial is preserved; the target was not relaxed. Native Linux preflight and AWS execution are separate. These figures describe only the AWS execution.</p>
-<p>This bounded trial validates admission and recovery, not maximum capacity, banking-service SLOs, long-term availability or automatic source-code migration. Initial classical-to-KPQC migration and subsequent recovery to the previously approved KPQC deployment are distinct. No classical rollback is allowed after migration.</p>
-<p><a href="workflow.public.json">Workflow evidence</a> · <a href="cleanup-verification.json">Cleanup verification</a> · <a href="../../../docs/RELEASE_EXPERIMENT_PLAN.md">Plan</a></p></html>
+<p><a href="workflow.public.json">Workflow record</a> · <a href="cleanup-verification.json">Cleanup verification</a> · <a href="../../../docs/RELEASE_EXPERIMENT_PLAN.md">Experiment plan</a></p>
+</html>

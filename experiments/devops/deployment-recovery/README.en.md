@@ -1,60 +1,106 @@
-# KPQC migration, performance admission and recovery
+# KPQC migration, deployment admission and recovery
 
-[한국어](README.html) · [Gallery](gallery.html) · [Raw evidence](measurements.public.json) · [Audit](audit.json)
+[한국어](README.html) · [Gallery](gallery.html) · [Raw records](measurements.public.json) · [Audit](audit.json)
 
-The existing TLS measurement and cryptographic gate now form one lifecycle: **classical-to-KPQC migration, performance admission, and automatic recovery to an approved KPQC version**. [GitHub Actions execution](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708), source `c232f7d`; 24 assertions passed. The workflow confirmed that both existing EC2 instances stopped and temporary SSH ingress was removed.
+This Seoul Region trial moved a service from classical cryptography to KPQC, admitted a later update, and restored the previously approved KPQC service after the new service failed. The [GitHub Actions run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708) passed 24 checks. After the run, both EC2 instances were stopped and the temporary SSH ingress rule was removed.
 
-## Environment and preregistered target
+## Test environment
 
-![Release lifecycle](architecture.en.png)
+![Deployment lifecycle](architecture.en.png)
 
-Two m7i.large instances in the same Seoul availability zone; each container has 2 CPUs/512 MiB, a Docker bridge and MTU (Maximum Transmission Unit) 1500. The original service uses X25519 + ECDSA P-256; candidates use SMAUG1 + HAETAE2. The initial KPQC release and subsequent update use the same algorithms, with distinct certificates and server processes. Full TLS (Transport Layer Security) 1.3 handshakes, directly trusted server certificates and migration-capable clients are assumed.
+| Item | Setup |
+|---|---|
+| AWS location | Seoul Region, same Availability Zone |
+| Compute | Two `m7i.large` EC2 instances: one TLS server and one test client |
+| Container limits | 2 CPUs and 512 MiB memory per container |
+| Container network | Docker bridge; MTU (Maximum Transmission Unit, maximum network-packet size) 1500 bytes |
+| TLS | TLS (Transport Layer Security) 1.3, full handshake on every attempt |
+| Certificate | The client directly trusts the test server certificate and checks its name |
+| Client | Prepared test client that can switch cryptographic settings |
 
-The SLO (Service Level Objective) is a **synthetic service target**, fixed before testing. Each candidate receives 10 scheduled arrivals/s for three 10-second windows. Every window must have ≤1% failed attempts, ≥99% successful completions within 200 ms, and successful completion p95 ≤200 ms. Generator-lateness p95 >50 ms or incomplete evidence prevents admission.
+| Service state | Key exchange + certificate signature |
+|---|---|
+| Existing service | X25519 + ECDSA P-256 |
+| KPQC service | SMAUG1 + HAETAE2 |
 
-Completion latency runs from scheduled arrival to C-client process exit, including scheduling, initialization, TCP, readiness, TLS and teardown. Separately recorded TLS latency covers only `SSL_connect`. There is no HTTP or business transaction. Every scheduled attempt remains in the denominator.
+## Admission criteria and timing metrics
 
-## Deployment roles and experiment sequence
+The SLO (Service Level Objective) is a service-response target set before the trial. Each candidate is tested with the same load and criteria.
 
-The **initial KPQC deployment candidate** replaces the existing X25519 + ECDSA P-256 service with SMAUG1 + HAETAE2. It replaces the active service only after passing cryptographic, certificate and performance checks.
+| Criterion | Pass condition |
+|---|---|
+| Load | 10 scheduled attempts/s, three 10-second windows (300 scheduled attempts per candidate) |
+| Failure rate | At most 1% in each window |
+| Timely success | At least 99% of scheduled attempts complete successfully within 200 ms in each window |
+| Successful completion p95 | At most 200 ms in each window |
+| Load-generator lateness p95 | At most 50 ms; exceeding it blocks admission |
+| Evidence | Missing or candidate-mismatched evidence blocks admission |
 
-The **subsequent update candidate** models a service update after KPQC adoption. It retains SMAUG1 + HAETAE2 and uses a new server certificate and a separate server process. This experiment changes the certificate and deployment target; it does not change the cryptographic algorithms or business functionality.
+Two different durations are recorded:
 
-After approving and deploying the update, the experiment injects a failure into the newly deployed service. The service accepted during initial KPQC deployment is now the **previously approved service**. Its current TLS connectivity, certificate and cryptographic policy are checked before routing connections back to it. The two stages test **initial KPQC adoption** and **subsequent update and recovery**, respectively, while retaining KPQC after recovery.
+| Metric | Start and end | Included work |
+|---|---|---|
+| Connection completion latency (used for deployment SLO) | Scheduled arrival time to C-client process exit | Scheduling delay, process startup and initialization, TCP connection, readiness signal, TLS handshake and shutdown |
+| TLS handshake latency (reported separately) | Immediately before `SSL_connect` to its return | The TLS handshake call interval |
 
-## Candidate admission
+The first metric checks whether the candidate meets the test service's response target. The second measures only the TLS call interval. Neither includes an HTTP request or a financial business transaction.
 
-All candidates passed cryptographic checks. The faulted candidate intentionally waits 350 ms before server TLS processing. This validates regression detection and is not intrinsic KPQC cost. Each value below is successful completion p95(ms) from one 100-arrival window.
+## Candidate roles and sequence
 
-| Candidate | Crypto check | Final decision | Three window p95 values(ms) |
+| Stage | Meaning | What changes in this trial |
+|---|---|---|
+| Initial KPQC deployment candidate | First candidate to replace the existing X25519 + ECDSA P-256 service with KPQC | Cryptographic configuration and server certificate |
+| Subsequent update candidate | Represents a service update after KPQC adoption | Server certificate and server process; SMAUG1 + HAETAE2 remains unchanged |
+| Previously approved service | The approved KPQC service used as the recovery target after the subsequent update fails | Route traffic back to this service instead of the failed candidate |
+
+The trial proceeds as follows:
+
+1. Test the initial KPQC candidate while the classical service is active.
+2. If cryptographic, certificate and performance checks pass, switch the active route to the KPQC candidate.
+3. Test and admit a subsequent update with a new certificate and a separate server process.
+4. Inject a failure into the updated service. Recheck the previously approved service's current TLS connectivity, certificate and cryptographic policy, then restore its route.
+
+Both KPQC candidates use SMAUG1 + HAETAE2. This is not an algorithm-update comparison; it models initial KPQC adoption and a later KPQC service update and recovery. Recovery does not return to classical cryptography.
+
+## Candidate admission results
+
+All candidates passed the cryptographic checks. To verify that the performance gate rejects a slow candidate, a 350 ms delay was injected before TLS processing. This is an intentional performance-regression condition, not the intrinsic processing time of the KPQC algorithms.
+
+The values below are successful connection-completion p95 values for each 10-second window. Each window scheduled 100 attempts.
+
+| Candidate | Crypto check | Performance decision | Completion p95 by window (ms) |
 |---|---|---|---|
-| Injected-delay candidate | Pass | Reject | 382.56, 382.46, 381.96 |
-| Initial KPQC candidate | Pass | Admit | 32.99, 33.19, 33.28 |
-| Subsequent update candidate | Pass | Admit | 33.20, 32.56, 32.74 |
+| Injected-delay candidate | Pass | Reject | 382.56 · 382.46 · 381.96 |
+| Initial KPQC deployment candidate | Pass | Admit | 32.99 · 33.19 · 33.28 |
+| Subsequent update candidate | Pass | Admit | 33.20 · 32.56 · 32.74 |
 
-![Performance admission](en/01-admission.png)
+![Candidate performance admission](en/01-admission.png)
 
-The slow candidate could not be promoted; the classical service remained active. The approved initial KPQC release then replaced it, verified through the actual certificate and negotiated codes. The subsequent update was also admitted. Performance evidence is bound to the candidate generation, certificate and policy and re-evaluated at promotion.
+The delayed candidate passed cryptographic checks but exceeded the response target, so it was rejected. After the initial KPQC candidate was admitted, the active route's server certificate and negotiated values were checked. The subsequent update passed the same checks. Performance evidence is bound to the candidate, certificate and policy identifiers and checked again at activation.
 
-## Failure and automatic recovery
+## Failure recovery results
 
-After terminating the newly deployed server process group, two consecutive failed health observations trigger validation and restoration of the previously approved deployment. Classical targets, incorrect certificates and stale health evidence are rejected.
+The server-process group deployed by the subsequent update was stopped. After two consecutive failed health observations, the controller checked the previously approved KPQC service's connectivity, certificate, policy and approval record, then restored its route. A classical service, a different certificate or stale recovery evidence was not accepted as a recovery target.
 
-- Injection request to detection: **1.596s**.
-- Injection request to first verified recovery: **2.951s**, against a 10-second target.
-- 150 scheduled fault-window attempts: **21 failures**, 23 successful connections to the new deployment, 106 successful connections to the restored previous deployment.
-- The final 20 attempts succeeded on the restored previous deployment; cryptographic policy and prohibited-client rejection were checked again.
+| Observation | Result |
+|---|---:|
+| Failure-injection request to detection | 1.596 s |
+| Failure-injection request to first successful connection after recovery | 2.951 s (pre-set target: within 10 s) |
+| Scheduled attempts during failure observation | 150 |
+| Failed attempts | 21 |
+| Successful connections to the new deployment | 23 |
+| Successful connections to the restored previous service | 106 |
+| Final attempts | All 20 connected successfully to the previously approved service |
 
 ![Automatic recovery](en/02-recovery.png)
 
-Recovery uses one controller monotonic clock and includes SSH control round trips. Failed attempts are retained. This is not a zero-downtime or transaction-preservation claim.
+Recovery time uses the controller's monotonic clock and includes SSH control round trips. The 21 failures during the incident remain in the results. This does not demonstrate zero downtime. Existing TCP-session or financial-transaction continuity was not tested.
 
-## Implementation and scope
+## Implementation checks and scope
 
-Idle accept-timeout exits in the prefork server were fixed; all eight workers and a successful connection were checked after 17 seconds idle. The former approved service stayed available while the next candidate was measured.
+- A server-worker exit after an idle `accept` timeout was fixed. Eight workers and a successful connection were confirmed after 17 seconds idle.
+- The previously approved service remained available as a recovery target while the next candidate was tested.
+- A Mac amd64-emulation preflight that rejected a healthy candidate when 2 of 100 attempts exceeded 200 ms is preserved separately. The target was not changed; native Linux preflight and AWS execution were kept separate.
+- These results describe one bounded AWS trial. They do not establish maximum throughput, banking-service SLOs, long-term availability or automatic source-code transformation.
 
-An earlier full Mac amd64-emulation trial rejected a healthy candidate because 2/100 attempts exceeded 200 ms. That failed trial is preserved; the target was not relaxed. Native Linux preflight and AWS execution are separate. These figures describe only the AWS execution.
-
-This bounded trial validates admission and recovery, not maximum capacity, banking-service SLOs, long-term availability or automatic source-code migration. Initial classical-to-KPQC migration and subsequent recovery to the previously approved KPQC deployment are distinct. No classical rollback is allowed after migration.
-
-[Workflow evidence](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Plan](../../../docs/RELEASE_EXPERIMENT_PLAN.md)
+[Workflow record](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Experiment plan](../../../docs/RELEASE_EXPERIMENT_PLAN.md)
