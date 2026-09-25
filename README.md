@@ -25,6 +25,27 @@
 
 [실험 전체 설명: 목적·환경·방법·결과](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md)에서 설계 이유와 단계별 결과를 확인할 수 있습니다. [HTML 자료](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html)는 내려받아 브라우저로 열 수 있습니다.
 
+## 실험 환경과 측정 범위
+
+서버와 클라이언트는 서울 동일 가용 영역의 m7i.large EC2 각각 한 대이며, 사설 IPv4로 통신합니다. 각 실험 컨테이너는 CPU 2개·메모리 512 MiB로 제한합니다. 동시 클라이언트 수는 EC2 대수가 아니라 클라이언트 인스턴스 안의 프로세스 수입니다.
+
+| 실험 | 네트워크 조건 | 암호 구성 |
+|---|---|---|
+| 초기·실행 순서 균형화 측정 | Docker host network, 인터페이스 MTU 9001 | SMAUG 1/3/5·NTRU+ 576/768/864/1152 × HAETAE 2/3/5·AIMer 128f/192f/256f 및 고전 기준선 |
+| 네트워크·동시 부하 | Docker bridge, MTU 1500/9001 비교; 세부 조건은 개별 보고서 참조 | 고전 기준선 및 {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f} |
+| 성능 승인·장애 복구 | Docker bridge, MTU 1500 | 기존 X25519 + ECDSA P-256에서 SMAUG1 + HAETAE2로 전환 |
+
+성능 비교는 여러 보안 파라미터를 포함하며 동일 보안 수준의 알고리즘 순위표가 아닙니다. 배포 실험은 이와 별도로 **SMAUG1 + HAETAE2를 승인 조합으로 고정**합니다. 다른 KPQC 조합을 배포하려면 정책도 변경해야 합니다.
+
+| 지표 | 측정 구간과 의미 |
+|---|---|
+| TLS 핸드셰이크 지연 | 클라이언트 `SSL_connect` 호출 전후 단조 시계 차이. TCP 연결·명시적 초기화·시험용 준비 신호는 제외하며, 호출 내부의 지연 초기화는 포함될 수 있습니다. |
+| 서버·클라이언트 CPU 시간 | 각 프로세스의 SSL 호출 전후 사용자·커널 CPU 시간 합의 차이. 네트워크 대기를 포함한 경과 시간과 구분합니다. |
+| 핸드셰이크 구간 최대 RSS (Resident Set Size) 증가량 | 별도 실행에서 초기화 후 RSS 최고 기록을 재설정하고 호출 구간 증가량을 측정합니다. 구성별 3회이며 총 메모리 요구량이나 연결당 고정 비용을 뜻하지 않습니다. |
+| 핸드셰이크 메시지 크기 | 메시지 콜백의 송수신 길이 합. TLS 레코드·TCP/IP 헤더와 재전송을 포함한 회선 전송량과 구분합니다. |
+
+인증은 자체 서명 서버 인증서를 클라이언트에 사전 등록하고 이름을 검증하는 방식입니다. 서버 인증만 수행하며 mTLS (Mutual TLS)는 사용하지 않습니다. 시험용 준비 신호와 배포 경로 선택은 TLS 호출 밖에서 처리합니다. 해당 접속 절차와 커스텀 TLS 식별자는 동일 이미지의 시험 프로그램 간 사용을 전제로 합니다.
+
 ## TLS 핸드셰이크 성능
 
 실행 순서를 균형화한 후속 측정은 43개 구성 × 2개 조건 × 30회로 총 2,580회를 분석했습니다. 준비·감시 연결은 분석에서 제외했습니다.
@@ -83,7 +104,15 @@ GitHub Actions는 이미지 빌드·로컬 시험 후 OIDC (OpenID Connect)로 A
 
 각 실험은 환경과 측정 구간이 다르므로 개별 보고서의 조건과 실행 기록을 따릅니다. HTML 보고서와 그림 모음은 저장소를 내려받아 브라우저로 열 수 있습니다.
 
-Docker·Compose와 Linux amd64 실행 환경이 필요합니다. 기반 이미지는 SHA-256 digest로 고정했습니다.
+원자료부터 확인하려면 [초기 집계 CSV](after_claude/data/summary.csv), [균형화 집계 CSV](after_claude/balanced/summary.csv), [암호 정책 시험 기록](after_claude/data/gate.public.json), [최종 배포 원자료](after_claude/release/measurements.public.json)를 참고하세요. 그래프는 [초기 측정](after_claude/gallery.html)·[균형화](after_claude/balanced/gallery.html)·[네트워크·부하](after_claude/systems/gallery.html)·[배포·복구](after_claude/release/gallery.html)별로 제공합니다.
+
+공개 배포 원자료의 판정과 수치를 AWS 실행 없이 다시 검증할 수 있습니다. 저장소 루트에서 실행하면 지정한 경로에 검증 요약이 생성됩니다.
+
+```sh
+python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
+```
+
+아래 명령은 정책 함수 시험과 로컬 Docker 통합 시험입니다. Docker·Compose와 Linux amd64(x86-64) 실행 환경이 필요합니다. 기반 이미지는 SHA-256 digest, 즉 이미지 내용을 식별하는 해시로 고정해 같은 이름의 다른 이미지로 바뀌는 것을 방지합니다.
 
 ```sh
 python3 scripts/test_gate_policy.py
@@ -92,10 +121,16 @@ python3 scripts/test_ci_deploy.py
 docker compose -f compose.gate.yaml run --build --rm gate
 ```
 
+AWS 측정은 [설정 가이드](docs/aws-setup.md)를 따른 뒤 [수동 워크플로](.github/workflows/aws-deploy.yml)에서 실행합니다. `balanced_latency`는 실행 순서 균형화, `systems_experiments`는 네트워크·동시 부하, `release_lifecycle`은 전환·성능 승인·복구를 선택합니다. 로컬 통합 시험은 loopback 통신이며 AWS 두 인스턴스의 성능 결과를 재현하는 명령은 아닙니다.
+
 핵심 코드: [TLS 계측](scripts/tls_handshake.c), [암호 정책](scripts/gate_policy.py), [성능 정책](scripts/release_policy.py), [전환·복구 실험](scripts/release_experiments.py), [AWS 실행·정리](scripts/ci_deploy.py). [AWS 설정 가이드](docs/aws-setup.md)
+
+## 결과의 적용 범위
 
 복구 대상 장애는 서버 프로세스 중단이며, 이전 승인 서비스는 같은 EC2에 유지됩니다. 시험용 TCP 라우터는 새 연결의 대상을 변경하며, 운영 로드밸런서의 연결 드레이닝이나 인스턴스·가용 영역 장애 복구를 검증한 것은 아닙니다.
 
 최종 배포 실험의 개인키는 서버 컨테이너의 임시 메모리 파일시스템(`tmpfs`)에 보관하고 종료 시 컨테이너와 함께 제거합니다. 클라이언트에는 신뢰할 공개 인증서만 전달합니다. 별도 운영 키 관리 시스템은 구현하지 않았습니다.
+
+반복 측정은 동일 인스턴스 쌍의 실행 안에서 수행했습니다. 여러 날짜·인스턴스 쌍의 독립 반복 검증은 포함하지 않습니다. 증적을 수집하고 판정하는 제어기는 신뢰하는 구성요소로 가정합니다.
 
 결과는 사용자 제작 OpenSSL 이미지, 제한된 실험 부하 및 직접 신뢰한 서버 인증서 조건의 관측입니다. 운영 PKI (Public Key Infrastructure) 체인, 장기간 가용성, 금융 거래 보존 및 다른 TLS 구현과의 상호운용은 검증 범위에 포함하지 않습니다. EC2 중지 후에도 EBS (Elastic Block Store) 볼륨은 유지됩니다.

@@ -25,6 +25,27 @@ Performance comparisons report observations; deployment decisions apply criteria
 
 The [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) explains the objectives, environment, methods and results. Download its [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) to view it in a browser.
 
+## Environment and measurement boundaries
+
+The server and client each run on one m7i.large EC2 instance in the same Seoul availability zone, communicating over private IPv4. Each experimental container is limited to 2 CPUs and 512 MiB memory. Concurrent client counts refer to processes within the client instance, not additional EC2 instances.
+
+| Experiment | Network conditions | Configurations |
+|---|---|---|
+| Initial and balanced-order measurements | Docker host networking, interface MTU 9001 | SMAUG 1/3/5 and NTRU+ 576/768/864/1152 × HAETAE 2/3/5 and AIMer 128f/192f/256f, plus the classical baseline |
+| Network and concurrent load | Docker bridge; MTU 1500/9001 comparison; consult individual reports for each trial | Classical baseline and {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f} |
+| Performance admission and recovery | Docker bridge, MTU 1500 | Migration from X25519 + ECDSA P-256 to SMAUG1 + HAETAE2 |
+
+Performance comparisons include different security parameter sets and do not rank algorithms at equivalent security levels. Separately, deployment tests **fix SMAUG1 + HAETAE2 as the approved combination**. Deploying another KPQC combination requires updating the policy.
+
+| Metric | Boundary and interpretation |
+|---|---|
+| TLS handshake latency | Monotonic elapsed time around the client's `SSL_connect`. Excludes TCP establishment, explicit initialization and the experimental readiness signal; lazy initialization inside the call may remain. |
+| Server/client CPU time | Difference in user plus system CPU time around each process's SSL call. Distinct from elapsed time that includes network waiting. |
+| Handshake-interval peak RSS (Resident Set Size) increase | Reset the RSS high-water mark after initialization and measure its increase during the call in a separate run. Three samples per configuration; not total memory requirements or a fixed per-connection cost. |
+| Handshake message size | Sum of message-callback send/receive lengths. Excludes TLS record and TCP/IP headers and retransmissions from wire traffic accounting. |
+
+Clients explicitly trust the self-signed server certificate and verify its hostname. Authentication is server-only, without mTLS (Mutual TLS). Experimental readiness and deployment-route selection occur outside the TLS call. This connection procedure and custom TLS identifiers assume test programs using the same image.
+
 ## TLS handshake performance
 
 The balanced follow-up analyzed 2,580 connections: 43 configurations × 2 modes × 30 measurements. Preparation and monitoring connections were excluded from analysis.
@@ -83,7 +104,15 @@ GitHub Actions builds and tests the image locally, obtains temporary AWS credent
 
 Experiments have different environments and measurement boundaries; consult each report's conditions and execution records. Download the repository to open HTML reports and galleries in a browser.
 
-Docker, Compose and a Linux amd64 environment are required. The base image is pinned by SHA-256 digest.
+Evidence entry points: [initial summary CSV](after_claude/data/summary.csv), [balanced summary CSV](after_claude/balanced/summary.csv), [cryptographic-gate records](after_claude/data/gate.public.json) and [final deployment raw records](after_claude/release/measurements.public.json). Figure galleries cover [initial measurements](after_claude/gallery.html), [balanced order](after_claude/balanced/gallery.html), [network/load](after_claude/systems/gallery.html) and [deployment/recovery](after_claude/release/gallery.html).
+
+Re-evaluate the public deployment records without running AWS. Run from the repository root; the command writes an audit summary to the specified directory.
+
+```sh
+python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
+```
+
+The following commands run policy tests and a local Docker integration test. Docker, Compose and Linux amd64 (x86-64) are required. The base image is pinned by its SHA-256 content digest so that a different image under the same tag is not substituted.
 
 ```sh
 python3 scripts/test_gate_policy.py
@@ -92,10 +121,16 @@ python3 scripts/test_ci_deploy.py
 docker compose -f compose.gate.yaml run --build --rm gate
 ```
 
+For AWS measurements, follow the [setup guide](docs/aws-setup.en.md) and use the [manual workflow](.github/workflows/aws-deploy.yml). Select `balanced_latency` for balanced execution order, `systems_experiments` for network/concurrent load, or `release_lifecycle` for migration/admission/recovery. Local integration tests use loopback and do not reproduce the two-instance AWS performance measurements.
+
 Core code: [TLS instrumentation](scripts/tls_handshake.c), [cryptographic policy](scripts/gate_policy.py), [performance policy](scripts/release_policy.py), [migration/recovery experiment](scripts/release_experiments.py), [AWS lifecycle](scripts/ci_deploy.py). [AWS setup guide](docs/aws-setup.en.md)
+
+## Scope of the results
 
 The injected fault stops server processes; the previous approved service remains on the same EC2 instance. The experimental TCP router changes destinations for new connections. Production load-balancer draining and instance or availability-zone failure recovery were not tested.
 
 In the final deployment experiment, private keys reside in the server container’s temporary memory filesystem (`tmpfs`) and are removed with the container during cleanup. Only public trust certificates are supplied to the client. A separate production key-management system is not implemented.
+
+Repeated samples come from executions on the same instance pair. Independent replication across dates and instance pairs is outside the evaluated scope. The controller collecting and evaluating evidence is a trusted component.
 
 Results describe the project OpenSSL image under bounded laboratory load with directly trusted server certificates. Production PKI (Public Key Infrastructure) chains, long-term availability, financial transaction preservation and interoperability with other TLS implementations are outside the verified scope. EBS (Elastic Block Store) volumes remain after EC2 shutdown.
