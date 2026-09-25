@@ -1,25 +1,25 @@
 # KPQC TLS DevOps Lab
 
-[한국어](README.md) | **English**
+[한국어](README.md) | English
 
-An OpenSSL-based project that **measures KPQC TLS handshake performance, admits deployments using cryptographic and performance checks, and restores a previously approved service after a failure**.
+An OpenSSL-based project that measures KPQC TLS handshake performance, admits deployments using cryptographic and performance checks, and restores a previously approved service after a failure.
 
 The project uses [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3). Performance experiments cover SMAUG and NTRU+ KEMs (Key Encapsulation Mechanisms), with HAETAE and AIMer signatures. The migration and recovery experiment uses SMAUG1 + HAETAE2.
 
 ## Validation objectives and experimental design
 
-The objective is to **measure KPQC TLS costs under bounded resources and determine whether observed cryptographic settings and response performance can govern deployment admission and recovery**. The experiments separate performance measurement, cryptographic enforcement and deployment recovery.
+The objective is to measure KPQC TLS costs under bounded resources and determine whether observed cryptographic settings and response performance can govern deployment admission and recovery. The experiments separate performance measurement, cryptographic enforcement and deployment recovery.
 
 | Validation target | Method and criteria | Observed outcome |
 |---|---|---|
-| **Handshake cost across configurations** | Compare 42 combinations of seven SMAUG/NTRU+ parameter sets and six HAETAE/AIMer parameter sets against X25519 + ECDSA P-256. Record full-handshake latency, CPU time on both endpoints and message bytes; measure memory separately. | The initial run analyzed 1,290 timing and 129 memory samples. The follow-up balanced fresh/reused-process order and analyzed 2,580 timing samples. Configuration-level latency is summarized below. |
-| **Network and concurrency effects** | Compare five representative configurations at MTU (Maximum Transmission Unit) 1500/9001 and added round-trip delay 0/10/30 ms. Compare HRR (HelloRetryRequest) with a control using the same final algorithms. Measure throughput with eight server workers and 1/4/16 client processes. | At 30 ms added delay, SMAUG1 + AIMer128f measured 62.576 ms at MTU 1500 and 34.128 ms at MTU 9001. HRR added approximately 31 ms. Concurrent-load tests validated 273,091 connections. |
-| **Rejection of forbidden cryptographic settings** | Require observed TLS 1.3, SMAUG1, HAETAE2, the specified cipher suite and successful certificate verification. Classical-only key exchange/signature and TLS 1.2 probes must fail. Check evidence freshness and binding to candidate, certificate fingerprint, image and policy. | Candidates accepting both KPQC and classical connections were rejected despite successful KPQC connectivity. The cryptographic gate passed 63 assertions, including mismatched or stale evidence and probe errors. |
-| **Performance-based deployment admission** | Test each candidate at 10 arrivals/s for three 10-second windows. Every window requires failure rate ≤1%, ≥99% completion within 200 ms, successful completion p95 ≤200 ms and generator lateness p95 ≤50 ms. | All three candidates completed 300 successful TLS connections each. Two normal candidates were admitted; the candidate with an injected 350 ms delay passed cryptographic checks but was rejected on performance. |
-| **Deployment under load and recovery after failure** | Test routing between healthy services separately from stopping the new service's processes. Recheck the previous approved KPQC service's current TLS health and certificate before restoring routing. | The deployment retest observed zero failures across 24,504 attempts. The separate fault experiment detected failure in 1.596 s and verified recovery in 2.951 s, with 21 failures among 150 attempts. |
-| **Automation and execution traceability** | Connect image build/test, AWS execution, policy decisions, evidence collection and cleanup through GitHub Actions. Preserve source commits, image identifiers, certificate fingerprints and raw records. | The final AWS run passed 63 cryptographic-gate and 24 migration/admission/recovery assertions. Both EC2 instances were stopped and temporary SSH ingress was removed afterward. |
+| Handshake cost across configurations | Compare 42 combinations of seven SMAUG/NTRU+ parameter sets and six HAETAE/AIMer parameter sets against X25519 + ECDSA P-256. Record full-handshake latency, CPU time on both endpoints and message bytes; measure memory separately. | The initial run analyzed 1,290 timing and 129 memory samples. The follow-up balanced fresh/reused-process order and analyzed 2,580 timing samples. Configuration-level latency is summarized below. |
+| Network and concurrency effects | Compare five representative configurations at MTU (Maximum Transmission Unit) 1500/9001 and added round-trip delay 0/10/30 ms. Compare HRR (HelloRetryRequest) with a control using the same final algorithms. Measure throughput with eight server workers and 1/4/16 client processes. | At 30 ms added delay, SMAUG1 + AIMer128f measured 62.576 ms at MTU 1500 and 34.128 ms at MTU 9001. HRR added approximately 31 ms. Concurrent-load tests validated 273,091 connections. |
+| Rejection of forbidden cryptographic settings | Require observed TLS 1.3, SMAUG1, HAETAE2, the specified cipher suite and successful certificate verification. Classical-only key exchange/signature and TLS 1.2 probes must fail. Check evidence freshness and binding to candidate, certificate fingerprint, image and policy. | Candidates accepting both KPQC and classical connections were rejected despite successful KPQC connectivity. The cryptographic gate passed 63 assertions, including mismatched or stale evidence and probe errors. |
+| Performance-based deployment admission | Test each candidate at 10 arrivals/s for three 10-second windows. Every window requires failure rate ≤1%, ≥99% completion within 200 ms, successful completion p95 ≤200 ms and generator lateness p95 ≤50 ms. | All three candidates completed 300 successful TLS connections each. Two normal candidates were admitted; the candidate with an injected 350 ms delay passed cryptographic checks but was rejected on performance. |
+| Deployment under load and recovery after failure | Test routing between healthy services separately from stopping the new service's processes. Recheck the previous approved KPQC service's current TLS health and certificate before restoring routing. | The deployment retest observed zero failures across 24,504 attempts. The separate fault experiment detected failure in 1.596 s and verified recovery in 2.951 s, with 21 failures among 150 attempts. |
+| Automation and execution traceability | Connect image build/test, AWS execution, policy decisions, evidence collection and cleanup through GitHub Actions. Preserve source commits, image identifiers, certificate fingerprints and raw records. | The final AWS run passed 63 cryptographic-gate and 24 migration/admission/recovery assertions. Both EC2 instances were stopped and temporary SSH ingress was removed afterward. |
 
-For example, a candidate may change from **SMAUG1-only** to **accepting both SMAUG1 and X25519**. A successful KPQC probe alone would miss this regression. The gate also attempts an X25519-only connection and rejects the candidate if that connection succeeds. A cryptographically compliant candidate is likewise rejected if it exceeds the response-performance limits.
+For example, a candidate may change from SMAUG1-only to accepting both SMAUG1 and X25519. A successful KPQC probe alone would miss this regression. The gate also attempts an X25519-only connection and rejects the candidate if that connection succeeds. A cryptographically compliant candidate is likewise rejected if it exceeds the response-performance limits.
 
 Performance comparisons report observations; deployment decisions apply criteria fixed before testing. Connection counts and latencies from different runs are not pooled. Network latency values above are medians of three block medians. The [network and load report](after_claude/systems/README.en.md) preserves detailed conditions and the failed initial deployment attempt.
 
@@ -35,7 +35,7 @@ The server and client each run on one m7i.large EC2 instance in the same Seoul a
 | Network and concurrent load | Docker bridge; MTU 1500/9001 comparison; consult individual reports for each trial | Classical baseline and {SMAUG1, NTRU+ KEM768} × {HAETAE2, AIMer128f} |
 | Performance admission and recovery | Docker bridge, MTU 1500 | Migration from X25519 + ECDSA P-256 to SMAUG1 + HAETAE2 |
 
-Performance comparisons include different security parameter sets and do not rank algorithms at equivalent security levels. Separately, deployment tests **fix SMAUG1 + HAETAE2 as the approved combination**. Deploying another KPQC combination requires updating the policy.
+Performance comparisons include different security parameter sets and do not rank algorithms at equivalent security levels. Separately, deployment tests fix SMAUG1 + HAETAE2 as the approved combination. Deploying another KPQC combination requires updating the policy.
 
 | Metric | Boundary and interpretation |
 |---|---|
@@ -61,11 +61,11 @@ Measurements span the client's `SSL_connect` call. Each range gives the smallest
 
 ![Deployment and recovery](after_claude/release/architecture.en.png)
 
-1. **Initial KPQC deployment candidate** replaces X25519 + ECDSA P-256 with SMAUG1 + HAETAE2.
-2. **Subsequent update candidate** retains the algorithms but uses a new server certificate and a separate server process. Business functionality is unchanged.
-3. **Recovery** injects a failure into the new deployment, checks the previous service's current TLS connectivity, certificate and cryptographic policy, then restores routing to that approved service. KPQC remains in use.
+1. Initial KPQC deployment candidate replaces X25519 + ECDSA P-256 with SMAUG1 + HAETAE2.
+2. Subsequent update candidate retains the algorithms but uses a new server certificate and a separate server process. Business functionality is unchanged.
+3. Recovery injects a failure into the new deployment, checks the previous service's current TLS connectivity, certificate and cryptographic policy, then restores routing to that approved service. KPQC remains in use.
 
-**Successful TLS connectivity does not imply deployment approval.** Observed cryptographic settings and performance must both satisfy policy. Policy violations or missing evidence preserve the current service.
+Successful TLS connectivity does not imply deployment approval. Observed cryptographic settings and performance must both satisfy policy. Policy violations or missing evidence preserve the current service.
 
 ## Performance-based admission results
 
@@ -79,9 +79,9 @@ The SLO (Service Level Objective) is a synthetic target fixed before testing. Ev
 | Initial KPQC deployment candidate | Pass | 32.99 / 33.19 / 33.28 ms | Admit |
 | Subsequent update candidate | Pass | 33.20 / 32.56 / 32.74 ms | Admit |
 
-Completion time spans **scheduled arrival to test-client process exit**, including initialization, TCP and TLS. Pure TLS (Transport Layer Security) handshake latency is recorded separately around `SSL_connect`. The 95th percentile, p95, is the value at or below which 95% of observations fall.
+Completion time spans scheduled arrival to test-client process exit, including initialization, TCP and TLS. Pure TLS (Transport Layer Security) handshake latency is recorded separately around `SSL_connect`. The 95th percentile, p95, is the value at or below which 95% of observations fall.
 
-From the fault-injection request, **detection took 1.596 s and verified recovery took 2.951 s**. The 150 fault-window attempts included 21 failures; the final 20 all succeeded on the restored service. This is not a zero-downtime result.
+From the fault-injection request, detection took 1.596 s and verified recovery took 2.951 s. The 150 fault-window attempts included 21 failures; the final 20 all succeeded on the restored service. This is not a zero-downtime result.
 
 [English report](after_claude/release/README.en.md) · [한국어 보고서](after_claude/release/README.md) · [Figure gallery](after_claude/release/gallery.html) · [Evidence audit](after_claude/release/audit.json)
 
@@ -91,7 +91,7 @@ Policy requires TLS 1.3, SMAUG1, HAETAE2 and TLS_AES_256_GCM_SHA384. KEM and sig
 
 GitHub Actions builds and tests the image locally, obtains temporary AWS credentials through OIDC (OpenID Connect), and uses SSH (Secure Shell) to deploy the identical image to the existing server and client. It saves evidence, stops both EC2 instances and removes temporary SSH ingress. Push-triggered CI does not start EC2 instances.
 
-[The AWS execution](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708) passed **63 cryptographic-gate assertions and 24 migration, admission and recovery assertions**. Experiment source `c232f7d` is distinct from subsequent documentation and CI fixes. Both instances were confirmed stopped by the workflow and an independent AWS query.
+[The AWS execution](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708) passed 63 cryptographic-gate assertions and 24 migration, admission and recovery assertions. Experiment source `c232f7d` is distinct from subsequent documentation and CI fixes. Both instances were confirmed stopped by the workflow and an independent AWS query.
 
 ## Other experiments and reproduction
 
