@@ -6,6 +6,117 @@ An OpenSSL-based project that measures KPQC TLS handshake performance, admits de
 
 The project uses [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3). Performance experiments cover SMAUG and NTRU+ KEMs (Key Encapsulation Mechanisms), with HAETAE and AIMer signatures. The migration and recovery experiment uses SMAUG1 + HAETAE2.
 
+## Technology stack
+
+### Cryptography and instrumentation
+
+![C](docs/assets/stack/c.svg) ![Python](docs/assets/stack/python.svg) ![OpenSSL](docs/assets/stack/openssl.svg)
+
+C instruments TLS calls; Python orchestrates repeated experiments, policy evaluation and evidence checks. KPQC-enabled OpenSSL handles the actual TLS connections.
+
+### Runtime and infrastructure
+
+![Docker](docs/assets/stack/docker.svg) ![Docker Compose](docs/assets/stack/compose.svg) ![Linux](docs/assets/stack/linux.svg) ![AWS EC2](docs/assets/stack/ec2.svg)
+
+Docker and Compose run local experiments. Linux containers on AWS EC2 host the server/client experiments.
+
+### CI/CD and cloud access
+
+![GitHub Actions](docs/assets/stack/actions.svg) ![AWS IAM](docs/assets/stack/iam.svg)
+
+GitHub Actions runs builds, tests, deployment and cleanup. AWS IAM (Identity and Access Management) roles and OIDC (OpenID Connect) provide temporary credentials; SSH (Secure Shell) controls remote execution.
+
+### Analysis and documentation
+
+![Mermaid](docs/assets/stack/mermaid.svg) ![Matplotlib](docs/assets/stack/matplotlib.svg) ![Markdown](docs/assets/stack/markdown.svg)
+
+Mermaid describes the architecture, Matplotlib produces result plots, and Markdown/HTML present the methods and findings.
+
+## Quick start
+
+Start with the local cryptographic deployment gate; no AWS account is needed. It runs a server and client within one container, establishes real TLS connections, and tests approval of compliant candidates and rejection of invalid candidates.
+
+### 1. Prerequisites
+
+Install Git, Python 3, Docker Engine or a running Docker Desktop, and Docker Compose. On Windows, use a WSL2 Linux shell. Run all commands from the repository root.
+
+```sh
+git clone https://github.com/17seetwice/kpqc-tls-devops-lab.git
+cd kpqc-tls-devops-lab
+
+python3 --version
+docker compose version
+docker info
+```
+
+The local test requires no `.env`, AWS credentials or SSH key. Compose selects a Linux amd64 image. ARM hosts such as Apple Silicon require amd64 emulation; do not directly compare their timings with AWS measurements.
+
+### 2. Check policies and build the image
+
+```sh
+# Check policy decisions and cleanup logic without Docker
+python3 scripts/test_gate_policy.py
+python3 scripts/test_release_policy.py
+python3 scripts/test_ci_deploy.py
+
+# Download the KPQC base image and build the TLS test program
+docker compose -f compose.gate.yaml build
+```
+
+Each Python test command should finish with `OK`. The first build requires internet access and time to download the image and install packages. The base image is pinned by its SHA-256 content digest.
+
+### 3. Run the local TLS deployment gate
+
+```sh
+mkdir -p artifacts
+docker compose -f compose.gate.yaml run --rm gate
+```
+
+The test generates certificates, prepares the active service, rejects classical/mixed candidates, approves and routes to compliant KPQC candidates, then saves results and cleans up. Rejection messages for invalid candidates are expected. The test container is removed on exit; result files remain.
+
+### 4. Inspect results
+
+Results are written to `artifacts/local-gate-TIMESTAMP/results.json`. Summarize the most recent run with:
+
+```sh
+python3 - <<'PYCODE'
+import json
+from pathlib import Path
+runs = sorted(Path("artifacts").glob("local-gate-*/results.json"))
+if not runs:
+    raise SystemExit("No results.json found; check the experiment output.")
+path = runs[-1]
+result = json.loads(path.read_text())
+checks = result["assertions"]
+print("file:", path)
+print("status:", result["status"])
+print("checks:", sum(check["passed"] for check in checks), "/", len(checks))
+print("cleanup_errors:", result.get("cleanup_errors", []))
+PYCODE
+```
+
+The current expected outcome is `status: passed`, `checks: 63 / 63`, and `cleanup_errors: []`.
+
+### 5. Run a short handshake measurement
+
+After the gate test, run a short measurement over three representative configurations. It uses the same image and exercises fresh/reused-process conditions.
+
+```sh
+docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scripts/extended_handshake.py --local --balanced --smoke
+```
+
+Results are written to `artifacts/local-extended-TIMESTAMP/results.json`. Remove `--smoke` to run all 43 configurations across ten blocks. This command measures timing and does not include the separate memory experiment. Local tests use loopback and do not reproduce networking between two EC2 instances.
+
+### 6. Extend to AWS
+
+Follow the [setup guide](docs/aws-setup.en.md) to prepare two lab EC2 instances and GitHub Actions Secrets. Open Actions → `AWS PQC deployment gates` → `Run workflow` and select the required experiment.
+
+- `balanced_latency`: balanced-order measurements across 43 configurations.
+- `systems_experiments`: MTU, network delay, HRR, concurrent load and deployment under load.
+- `release_lifecycle`: classical-to-KPQC migration, performance admission and recovery.
+
+For a fork, update the repository restriction (`github.repository`) in the [workflow](.github/workflows/aws-deploy.yml) and the AWS role's trust conditions to match your repository. The local quick start requires neither change. After AWS execution, check `cleanup_complete` in the cleanup record and confirm that the EC2 instances are stopped.
+
 ## Validation objectives and experimental design
 
 The objective is to measure KPQC TLS costs under bounded resources and determine whether observed cryptographic settings and response performance can govern deployment admission and recovery. The experiments separate performance measurement, cryptographic enforcement and deployment recovery.
@@ -138,17 +249,6 @@ Re-evaluate the public deployment records without running AWS. Run from the repo
 ```sh
 python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
 ```
-
-The following commands run policy tests and a local Docker integration test. Docker, Compose and Linux amd64 (x86-64) are required. The base image is pinned by its SHA-256 content digest so that a different image under the same tag is not substituted.
-
-```sh
-python3 scripts/test_gate_policy.py
-python3 scripts/test_release_policy.py
-python3 scripts/test_ci_deploy.py
-docker compose -f compose.gate.yaml run --build --rm gate
-```
-
-For AWS measurements, follow the [setup guide](docs/aws-setup.en.md) and use the [manual workflow](.github/workflows/aws-deploy.yml). Select `balanced_latency` for balanced execution order, `systems_experiments` for network/concurrent load, or `release_lifecycle` for migration/admission/recovery. Local integration tests use loopback and do not reproduce the two-instance AWS performance measurements.
 
 Core code: [TLS instrumentation](scripts/tls_handshake.c), [cryptographic policy](scripts/gate_policy.py), [performance policy](scripts/release_policy.py), [migration/recovery experiment](scripts/release_experiments.py), [AWS lifecycle](scripts/ci_deploy.py). [AWS setup guide](docs/aws-setup.en.md)
 

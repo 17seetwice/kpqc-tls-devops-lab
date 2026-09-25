@@ -6,6 +6,117 @@
 
 [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3) 이미지를 사용합니다. 성능 측정 대상은 SMAUG·NTRU+ KEM (Key Encapsulation Mechanism)과 HAETAE·AIMer 서명입니다. 전환·복구 실험은 SMAUG1 + HAETAE2를 사용합니다.
 
+## 기술 스택
+
+### 암호 구현·성능 계측
+
+![C](docs/assets/stack/c.svg) ![Python](docs/assets/stack/python.svg) ![OpenSSL](docs/assets/stack/openssl.svg)
+
+C로 TLS 호출을 계측하고, Python으로 반복 실험·정책 판정·결과 검증을 수행합니다. KPQC가 통합된 OpenSSL이 실제 TLS 연결을 처리합니다.
+
+### 실행 환경
+
+![Docker](docs/assets/stack/docker.svg) ![Docker Compose](docs/assets/stack/compose.svg) ![Linux](docs/assets/stack/linux.svg) ![AWS EC2](docs/assets/stack/ec2.svg)
+
+Docker·Compose로 로컬 실험을 실행하고, AWS EC2의 Linux 컨테이너에서 서버·클라이언트 실험을 수행합니다.
+
+### CI/CD·클라우드 접근
+
+![GitHub Actions](docs/assets/stack/actions.svg) ![AWS IAM](docs/assets/stack/iam.svg)
+
+GitHub Actions가 빌드·시험·배포·정리를 실행합니다. AWS IAM (Identity and Access Management) 역할과 OIDC (OpenID Connect)로 단기 권한을 얻고, SSH (Secure Shell)로 원격 실행을 제어합니다.
+
+### 분석·문서화
+
+![Mermaid](docs/assets/stack/mermaid.svg) ![Matplotlib](docs/assets/stack/matplotlib.svg) ![Markdown](docs/assets/stack/markdown.svg)
+
+Mermaid로 아키텍처를 작성하고 Matplotlib으로 결과 그래프를 생성합니다. 실험 방법과 결과는 Markdown·HTML로 제공합니다.
+
+## 빠른 시작
+
+처음에는 AWS 계정 없이 로컬 암호 정책 게이트부터 실행하세요. 서버와 클라이언트를 한 컨테이너에서 실행해 실제 TLS 연결을 만들고, 정상 후보 승인·잘못된 후보 거절을 시험합니다.
+
+### 1. 사전 준비
+
+Git, Python 3, Docker Engine 또는 실행 중인 Docker Desktop, Docker Compose가 필요합니다. Windows에서는 WSL2의 Linux 셸을 사용하세요. 아래 명령은 모두 저장소 루트에서 실행합니다.
+
+```sh
+git clone https://github.com/17seetwice/kpqc-tls-devops-lab.git
+cd kpqc-tls-devops-lab
+
+python3 --version
+docker compose version
+docker info
+```
+
+이 로컬 시험에는 `.env`, AWS 자격 증명, SSH 키가 필요하지 않습니다. Compose가 Linux amd64 이미지를 사용하도록 설정되어 있습니다. Apple Silicon 등 ARM 환경에서는 amd64 에뮬레이션이 필요하며, 해당 결과는 AWS 성능 수치와 직접 비교하지 않습니다.
+
+### 2. 정책 검사와 실험 이미지 빌드
+
+```sh
+# Docker 없이 정책 판정과 정리 로직 검사
+python3 scripts/test_gate_policy.py
+python3 scripts/test_release_policy.py
+python3 scripts/test_ci_deploy.py
+
+# KPQC 기반 이미지 다운로드 및 TLS 시험 프로그램 빌드
+docker compose -f compose.gate.yaml build
+```
+
+Python 시험은 모두 `OK`로 끝나야 합니다. 첫 이미지 빌드에는 인터넷 연결이 필요하며 다운로드·패키지 설치 시간이 걸립니다. 기반 이미지는 SHA-256 digest(이미지 내용을 식별하는 해시)로 고정되어 있습니다.
+
+### 3. 로컬 TLS 배포 게이트 실행
+
+```sh
+mkdir -p artifacts
+docker compose -f compose.gate.yaml run --rm gate
+```
+
+인증서 생성 → 기존 서비스 준비 → 고전·혼합 암호 후보 거절 → 정상 KPQC 후보 승인·경로 전환 → 결과 저장·정리 순서로 진행합니다. 잘못된 후보가 거절되는 로그는 예상한 시험 동작입니다. 종료 후 시험 컨테이너는 제거되고 결과 파일은 남습니다.
+
+### 4. 결과 확인
+
+결과는 `artifacts/local-gate-실행시각/results.json`에 저장됩니다. 다음 명령으로 가장 최근 실행의 상태와 검증 항목 수를 확인합니다.
+
+```sh
+python3 - <<'PYCODE'
+import json
+from pathlib import Path
+runs = sorted(Path("artifacts").glob("local-gate-*/results.json"))
+if not runs:
+    raise SystemExit("No results.json found; check the experiment output.")
+path = runs[-1]
+result = json.loads(path.read_text())
+checks = result["assertions"]
+print("file:", path)
+print("status:", result["status"])
+print("checks:", sum(check["passed"] for check in checks), "/", len(checks))
+print("cleanup_errors:", result.get("cleanup_errors", []))
+PYCODE
+```
+
+현재 정상 종료 기준은 `status: passed`, `checks: 63 / 63`, `cleanup_errors: []`입니다.
+
+### 5. 핸드셰이크 측정도 실행하기
+
+게이트 시험 후 다음 명령으로 대표 3개 구성의 짧은 핸드셰이크 측정을 실행할 수 있습니다. 같은 이미지를 사용하며 새 프로세스·재사용 조건을 시험합니다.
+
+```sh
+docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scripts/extended_handshake.py --local --balanced --smoke
+```
+
+결과는 `artifacts/local-extended-실행시각/results.json`에 저장됩니다. 전체 43개 구성·10블록을 실행하려면 `--smoke`를 제외하세요. 이 명령은 시간 측정용이며 별도 메모리 측정을 포함하지 않습니다. 로컬 시험은 loopback 통신이므로 두 EC2 사이의 네트워크 성능을 재현하지 않습니다.
+
+### 6. AWS 실험으로 확장하기
+
+[설정 가이드](docs/aws-setup.md)에 따라 실험용 EC2 두 대와 GitHub Actions Secrets를 준비한 뒤, Actions의 `AWS PQC deployment gates` → `Run workflow`에서 필요한 실험을 선택합니다.
+
+- `balanced_latency`: 43개 구성의 실행 순서 균형화 측정.
+- `systems_experiments`: MTU·네트워크 지연·HRR·동시 부하·부하 중 전환.
+- `release_lifecycle`: 고전 암호에서 KPQC로 전환·성능 승인·장애 복구.
+
+다른 계정으로 fork한 경우 [워크플로](.github/workflows/aws-deploy.yml)의 저장소 제한(`github.repository`)과 AWS 역할의 신뢰 조건을 본인 저장소에 맞춰야 합니다. 로컬 빠른 시작은 이 설정 없이 실행할 수 있습니다. AWS 실행 후에는 정리 기록의 `cleanup_complete`와 EC2 중지 상태를 확인하세요.
+
 ## 검증 목표와 실험 구성
 
 본 프로젝트의 검증 목표는 제한된 자원에서 KPQC TLS의 실행 비용을 측정하고, 실제 연결에서 확인한 암호 설정과 응답 성능을 배포 승인·장애 복구에 적용할 수 있는지 확인하는 것입니다. 성능 측정, 암호 정책 검사, 배포·복구를 다음과 같이 구분해 시험했습니다.
@@ -138,17 +249,6 @@ GitHub Actions는 이미지 빌드·로컬 시험 후 OIDC (OpenID Connect)로 A
 ```sh
 python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
 ```
-
-아래 명령은 정책 함수 시험과 로컬 Docker 통합 시험입니다. Docker·Compose와 Linux amd64(x86-64) 실행 환경이 필요합니다. 기반 이미지는 SHA-256 digest, 즉 이미지 내용을 식별하는 해시로 고정해 같은 이름의 다른 이미지로 바뀌는 것을 방지합니다.
-
-```sh
-python3 scripts/test_gate_policy.py
-python3 scripts/test_release_policy.py
-python3 scripts/test_ci_deploy.py
-docker compose -f compose.gate.yaml run --build --rm gate
-```
-
-AWS 측정은 [설정 가이드](docs/aws-setup.md)를 따른 뒤 [수동 워크플로](.github/workflows/aws-deploy.yml)에서 실행합니다. `balanced_latency`는 실행 순서 균형화, `systems_experiments`는 네트워크·동시 부하, `release_lifecycle`은 전환·성능 승인·복구를 선택합니다. 로컬 통합 시험은 loopback 통신이며 AWS 두 인스턴스의 성능 결과를 재현하는 명령은 아닙니다.
 
 핵심 코드: [TLS 계측](scripts/tls_handshake.c), [암호 정책](scripts/gate_policy.py), [성능 정책](scripts/release_policy.py), [전환·복구 실험](scripts/release_experiments.py), [AWS 실행·정리](scripts/ci_deploy.py). [AWS 설정 가이드](docs/aws-setup.md)
 
