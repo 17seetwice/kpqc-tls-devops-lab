@@ -8,24 +8,16 @@ Run: `aws-extended-20260924T134811Z` · Source: `cfd6bcc` · [GitHub Actions evi
 
 The experiment compares TLS handshake latency for the same cryptographic configuration when the test program starts afresh for each connection versus when a running process creates another connection.
 
-### What is a process?
+### What does process reuse mean in this experiment?
 
-A program is an executable file; a process is a running instance of that program. Starting `tls_handshake` gives it memory, execution state and a PID (Process ID). Separate executions of the same program can create different processes.
+Process reuse means using the running TLS test program and its prepared TLS configuration for another connection.
 
-Here, processes are the server/client test programs. EC2 instances and containers are not recreated for every connection. An open port alone does not establish whether a process is being reused.
+- Fresh-process mode (cold): start a new client for each connection; the server also prepares TLS configuration in a new child process.
+- Reused-process mode (warm): retain the running program and its TLS configuration across connections. For one cryptographic configuration, perform two preparation connections and analyze the next three.
 
-### Fresh versus reused processes
+Both modes create a new connection and perform a full TLS handshake, including authentication and key exchange. TLS session resumption, which uses previous connection state to shorten the procedure, is disabled. The experiment compares handshake latency with and without reusing the program and configuration.
 
-- Fresh process (cold): start a new client program for each connection. The listening server parent forks a child per connection; that child prepares the TLS configuration and performs the handshake.
-- Reused process (warm): retain the process and OpenSSL configuration object (`SSL_CTX`) within repeated measurements of one configuration. Perform two preparation connections, then analyze three connections.
-- Both modes: create a new TCP (Transmission Control Protocol) connection and per-connection TLS object each time, performing a full handshake. TLS session resumption via session tickets is disabled.
-
-```text
-Fresh:  start and configure → connect and complete handshake → exit → start again
-Reused: start and configure → connect and complete handshake → close connection → connect again in the same process
-```
-
-Reuse is scoped to repeated connections for one configuration, not one process for all algorithms. Cold does not mean that operating-system caches were forcibly cleared.
+Reuse applies within repeated connections for one configuration. Fresh-process mode does not forcibly clear operating-system caches.
 
 ### Why change the measurement order?
 
