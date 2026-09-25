@@ -83,8 +83,8 @@ Network analysis retains 270 connections and HRR analysis retains 216, excluding
 From the repository root:
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
-.venv/bin/python 'after_claude/scripts/report_systems.py'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 
 The three blocks belong to one execution on the same instance pair. Do not pool these bridge-network measurements with previous host-network results or generalize them to untested parameters or production service capacity.

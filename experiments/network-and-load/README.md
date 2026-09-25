@@ -83,8 +83,8 @@ HRR 유발 연결 180회에서 각각 HRR 1회, 대조 연결 180회에서 HRR 0
 저장소 루트에서 실행:
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
-.venv/bin/python 'after_claude/scripts/report_systems.py'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 
 세 블록은 동일 인스턴스 쌍의 한 실행에 속한다. 기존 호스트 네트워크 결과와 직접 합산하지 않으며, 이번 대표 파라미터 밖의 조합과 실서비스의 처리 용량으로 일반화하지 않는다.

@@ -1,6 +1,6 @@
 # KPQC TLS 1.3 Measurement and Policy-Based Deployment Validation
 
-For the subsequent experiment, see the [migration, admission and recovery report](../after_claude/release/README.en.md). The content below describes the initial experiment.
+For the subsequent experiment, see the [migration, admission and recovery report](../experiments/deployment-recovery/README.en.md). The content below describes the initial experiment.
 
 Technical report revision · For author review · 2026-09-24
 
@@ -52,7 +52,7 @@ Candidate generation, certificate, image and policy identifiers, together with e
 | Client peak RSS growth | 460 KiB | 648–980 KiB |
 | Server peak RSS growth | 420 KiB | 628–1,252 KiB |
 
-The 1,935 collected connections comprise 1,290 latency-analysis connections, 129 memory-analysis connections and 516 warm-up/sentinel connections. No session resumption or HRR (HelloRetryRequest) was observed. See the [figure captions](../after_claude/captions.en.md) and [summary CSV](../after_claude/data/summary.csv).
+The 1,935 collected connections comprise 1,290 latency-analysis connections, 129 memory-analysis connections and 516 warm-up/sentinel connections. No session resumption or HRR (HelloRetryRequest) was observed. See the [figure captions](../experiments/captions.en.md) and [summary CSV](../experiments/data/summary.csv).
 
 The final AWS (Amazon Web Services) gate passed 63/63 assertions. Active-route monitoring recorded 69 samples with zero failures. Assertions include expected rejections and are not a count of successful TLS connections.
 

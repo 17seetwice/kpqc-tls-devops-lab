@@ -15,5 +15,5 @@
 Mermaid 원본과 컴파일한 SVG·PNG는 `architecture/ko`, `architecture/en`에 있다. 저장소 루트의 Mermaid CLI로 재생성할 수 있다.
 
 ```sh
-.tools/mermaid/node_modules/.bin/mmdc -i 'after_claude/architecture/ko/performance.mmd' -o 'after_claude/architecture/ko/performance.svg' -c 'after_claude/architecture/ko/mermaid-config.json' -b white
+.tools/mermaid/node_modules/.bin/mmdc -i 'experiments/architecture/ko/performance.mmd' -o 'experiments/architecture/ko/performance.svg' -c 'experiments/architecture/ko/mermaid-config.json' -b white
 ```

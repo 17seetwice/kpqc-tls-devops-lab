@@ -124,12 +124,12 @@ The experiments measure KPQC TLS costs and validate cryptographic/performance-ba
 ### 1. Handshake cost
 
 - Method: compare 42 KPQC combinations and a classical baseline; record latency, CPU time and message size, with separate memory runs.
-- Outcome: analyze 1,290 initial timing samples, 129 memory samples and 2,580 balanced-order timing samples. [Configuration results](after_claude/balanced/README.en.md)
+- Outcome: analyze 1,290 initial timing samples, 129 memory samples and 2,580 balanced-order timing samples. [Configuration results](experiments/process-reuse/README.en.md)
 
 ### 2. Network and concurrency
 
 - Method: vary MTU, added delay, HRR and concurrency across five representative configurations.
-- Outcome: HRR adds approximately 31 ms at 30 ms added round-trip delay; validate 273,091 concurrent-load connections. [Network and throughput results](after_claude/systems/README.en.md)
+- Outcome: HRR adds approximately 31 ms at 30 ms added round-trip delay; validate 273,091 concurrent-load connections. [Network and throughput results](experiments/network-and-load/README.en.md)
 
 ### 3. Cryptographic gate
 
@@ -139,7 +139,7 @@ The experiments measure KPQC TLS costs and validate cryptographic/performance-ba
 ### 4. Performance admission
 
 - Method: test each candidate at 10 arrivals/s for three 10-second windows; check failures, completion within 200 ms, p95 and generator lateness.
-- Outcome: admit two normal candidates and reject the injected 350 ms delay candidate, despite 300 successful TLS connections per candidate. [Criteria and decisions](after_claude/release/README.en.md)
+- Outcome: admit two normal candidates and reject the injected 350 ms delay candidate, despite 300 successful TLS connections per candidate. [Criteria and decisions](experiments/deployment-recovery/README.en.md)
 
 ### 5. Deployment and recovery
 
@@ -183,11 +183,11 @@ The balanced follow-up analyzed 2,580 connections: 43 configurations × 2 modes 
 | Fresh process | 1.724 ms | 3.891–12.218 ms |
 | Reused process | 0.815 ms | 2.852–11.500 ms |
 
-Measurements span the client's `SSL_connect` call. Each range gives the smallest and largest median across 42 KPQC configurations. In fresh-process mode, the server forks a child per connection. Reused-process mode still creates a new connection and performs a full TLS handshake each time. [Methods and complete results](after_claude/balanced/README.en.md)
+Measurements span the client's `SSL_connect` call. Each range gives the smallest and largest median across 42 KPQC configurations. In fresh-process mode, the server forks a child per connection. Reused-process mode still creates a new connection and performs a full TLS handshake each time. [Methods and complete results](experiments/process-reuse/README.en.md)
 
 ## Deployment lifecycle
 
-![Deployment and recovery](after_claude/release/architecture.en.png)
+![Deployment and recovery](experiments/deployment-recovery/architecture.en.png)
 
 1. Initial KPQC deployment candidate replaces X25519 + ECDSA P-256 with SMAUG1 + HAETAE2.
 2. Subsequent update candidate retains the algorithms but uses a new server certificate and a separate server process. Business functionality is unchanged.
@@ -211,7 +211,7 @@ Completion time spans scheduled arrival to test-client process exit, including i
 
 From the fault-injection request, detection took 1.596 s and verified recovery took 2.951 s. The 150 fault-window attempts included 21 failures; the final 20 all succeeded on the restored service. This is not a zero-downtime result.
 
-[English report](after_claude/release/README.en.md) · [한국어 보고서](after_claude/release/README.md) · [Figure gallery](after_claude/release/gallery.html) · [Evidence audit](after_claude/release/audit.json)
+[English report](experiments/deployment-recovery/README.en.md) · [한국어 보고서](experiments/deployment-recovery/README.md) · [Figure gallery](experiments/deployment-recovery/gallery.html) · [Evidence audit](experiments/deployment-recovery/audit.json)
 
 ## Cryptographic policy and CI/CD
 
@@ -244,11 +244,11 @@ kpqc-tls-devops-lab/
 ├── policies/                        # Deployment admission criteria
 │   ├── pqc-required.json            # Required crypto and forbidden probes
 │   └── release-slo.json             # Performance and recovery objectives
-├── after_claude/                    # Published reports, evidence and plots
+├── experiments/                    # Published reports, evidence and plots
 │   ├── data/                        # Initial measurement and gate records
-│   ├── balanced/                    # Fresh/reused-process results
-│   ├── systems/                     # Network, load and deployment results
-│   └── release/                     # Admission and recovery results
+│   ├── process-reuse/                    # Fresh/reused-process results
+│   ├── network-and-load/                     # Network, load and deployment results
+│   └── deployment-recovery/                     # Admission and recovery results
 ├── docs/                            # Setup guides and walkthrough
 │   ├── lab-meeting/                 # Full walkthrough in Markdown/HTML
 │   └── assets/stack/                # Technology stack badges
@@ -256,25 +256,25 @@ kpqc-tls-devops-lab/
 └── compose.gate.yaml                # Local gate configuration
 ```
 
-Local runs write generated results to `artifacts/`. Published evidence is available under `after_claude/`.
+Local runs write generated results to `artifacts/`. Published evidence is available under `experiments/`.
 
 ## Other experiments and reproduction
 
 | Experiment | Documentation |
 |---|---|
-| Handshake, CPU and memory across 43 configurations | [Environment](after_claude/01_environment.md) · [Methods](after_claude/02_methods.md) · [Results](after_claude/03_results.md) · [English captions](after_claude/captions.en.md) |
-| TLS latency with fresh and reused processes | [English](after_claude/balanced/README.en.md) · [한국어](after_claude/balanced/README.md) |
-| MTU, network delay, HelloRetryRequest, concurrency and deployment under load | [English](after_claude/systems/README.en.md) · [한국어](after_claude/systems/README.md) |
-| Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](after_claude/release/README.en.md) · [한국어](after_claude/release/README.md) |
+| Handshake, CPU and memory across 43 configurations | [Environment](experiments/01_environment.md) · [Methods](experiments/02_methods.md) · [Results](experiments/03_results.md) · [English captions](experiments/captions.en.md) |
+| TLS latency with fresh and reused processes | [English](experiments/process-reuse/README.en.md) · [한국어](experiments/process-reuse/README.md) |
+| MTU, network delay, HelloRetryRequest, concurrency and deployment under load | [English](experiments/network-and-load/README.en.md) · [한국어](experiments/network-and-load/README.md) |
+| Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](experiments/deployment-recovery/README.en.md) · [한국어](experiments/deployment-recovery/README.md) |
 
 Experiments have different environments and measurement boundaries; consult each report's conditions and execution records. Download the repository to open HTML reports and galleries in a browser.
 
-Evidence entry points: [initial summary CSV](after_claude/data/summary.csv), [balanced summary CSV](after_claude/balanced/summary.csv), [cryptographic-gate records](after_claude/data/gate.public.json) and [final deployment raw records](after_claude/release/measurements.public.json). Figure galleries cover [initial measurements](after_claude/gallery.html), [balanced order](after_claude/balanced/gallery.html), [network/load](after_claude/systems/gallery.html) and [deployment/recovery](after_claude/release/gallery.html).
+Evidence entry points: [initial summary CSV](experiments/data/summary.csv), [balanced summary CSV](experiments/process-reuse/summary.csv), [cryptographic-gate records](experiments/data/gate.public.json) and [final deployment raw records](experiments/deployment-recovery/measurements.public.json). Figure galleries cover [initial measurements](experiments/gallery.html), [balanced order](experiments/process-reuse/gallery.html), [network/load](experiments/network-and-load/gallery.html) and [deployment/recovery](experiments/deployment-recovery/gallery.html).
 
 Re-evaluate the public deployment records without running AWS. Run from the repository root; the command writes an audit summary to the specified directory.
 
 ```sh
-python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
+python3 scripts/audit_release.py experiments/deployment-recovery/measurements.public.json --out /tmp/kpqc-release-audit
 ```
 
 Core code: [TLS instrumentation](scripts/tls_handshake.c), [cryptographic policy](scripts/gate_policy.py), [performance policy](scripts/release_policy.py), [migration/recovery experiment](scripts/release_experiments.py), [AWS lifecycle](scripts/ci_deploy.py). [AWS setup guide](docs/aws-setup.en.md)

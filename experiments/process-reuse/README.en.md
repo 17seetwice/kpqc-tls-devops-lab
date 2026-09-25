@@ -73,7 +73,7 @@ Cleanup evidence reports completion with no errors. A separate AWS API (Applicat
 ## Reproduction
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_balanced.py' 'after_claude/balanced/measurements.public.json' 'after_claude/balanced'
+.venv/bin/python 'experiments/scripts/analyze_balanced.py' 'experiments/process-reuse/measurements.public.json' 'experiments/process-reuse'
 ```
 
 `measurements.public.json` contains the public workflow measurements; `workflow.public.json` contains gate and cleanup evidence. `summary.csv`, `blocks.csv` and `paired.csv` hold configuration medians, block medians and paired-mode ratios. `audit.json` records the validation summary.

@@ -186,8 +186,8 @@ footer{border-top:1px solid #dce3e8;margin-top:32px;padding-top:16px}
 <li><a href="measurements.public.json.gz">Performance and initial failure records</a> · <a href="rollout.public.json.gz">Rollout retry records</a> · <a href="REVIEW_LOG.md">Review log</a></li>
 </ul>
 <p>From the repository root:</p>
-<pre><code class="language-sh">.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
-.venv/bin/python 'after_claude/scripts/report_systems.py'
+<pre><code class="language-sh">.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/report_systems.py'
 </code></pre>
 <p>The three blocks belong to one execution on the same instance pair. Do not pool these bridge-network measurements with previous host-network results or generalize them to untested parameters or production service capacity.</p>
 <footer><a href="README.en.md" download>원본 다운로드 / Download source</a></footer>

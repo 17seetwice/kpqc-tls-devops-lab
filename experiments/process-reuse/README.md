@@ -73,7 +73,7 @@ ECDSA는 Elliptic Curve Digital Signature Algorithm, PQC는 Post-Quantum Cryptog
 ## 재현
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_balanced.py' 'after_claude/balanced/measurements.public.json' 'after_claude/balanced'
+.venv/bin/python 'experiments/scripts/analyze_balanced.py' 'experiments/process-reuse/measurements.public.json' 'experiments/process-reuse'
 ```
 
 `measurements.public.json`은 워크플로가 제공한 공개 원기록, `workflow.public.json`은 게이트와 정리 증적이다. `summary.csv`는 구성별 중앙값, `blocks.csv`는 블록 중앙값, `paired.csv`는 짝지은 모드 비율, `audit.json`은 검증 요약이다.

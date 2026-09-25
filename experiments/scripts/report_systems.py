@@ -2,7 +2,7 @@
 """Generate bilingual result tables from audited block CSVs."""
 import csv,json,statistics as st
 from pathlib import Path
-P=Path('after_claude/systems')
+P=Path('experiments/network-and-load')
 a=json.loads((P/'audit.json').read_text())
 def read(name):return list(csv.DictReader((P/name).open()))
 net=read('network_blocks.csv');hrr=read('paired_contrasts.csv');load=read('throughput_blocks.csv')
@@ -97,8 +97,8 @@ HRR 유발 연결 180회에서 각각 HRR 1회, 대조 연결 180회에서 HRR 0
 저장소 루트에서 실행:
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
-.venv/bin/python 'after_claude/scripts/report_systems.py'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 
 세 블록은 동일 인스턴스 쌍의 한 실행에 속한다. 기존 호스트 네트워크 결과와 직접 합산하지 않으며, 이번 대표 파라미터 밖의 조합과 실서비스의 처리 용량으로 일반화하지 않는다.
@@ -175,8 +175,8 @@ Network analysis retains {a['network_analyzed']} connections and HRR analysis re
 From the repository root:
 
 ```sh
-.venv/bin/python 'after_claude/scripts/analyze_systems.py' 'after_claude/systems/measurements.public.json.gz' --rollout-source 'after_claude/systems/rollout.public.json.gz'
-.venv/bin/python 'after_claude/scripts/report_systems.py'
+.venv/bin/python 'experiments/scripts/analyze_systems.py' 'experiments/network-and-load/measurements.public.json.gz' --rollout-source 'experiments/network-and-load/rollout.public.json.gz'
+.venv/bin/python 'experiments/scripts/report_systems.py'
 ```
 
 The three blocks belong to one execution on the same instance pair. Do not pool these bridge-network measurements with previous host-network results or generalize them to untested parameters or production service capacity.

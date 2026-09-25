@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-ap=argparse.ArgumentParser();ap.add_argument('source');ap.add_argument('--out',default='after_claude/systems');ap.add_argument('--rollout-source');ap.add_argument('--performance-only',action='store_true');a=ap.parse_args()
+ap=argparse.ArgumentParser();ap.add_argument('source');ap.add_argument('--out',default='experiments/network-and-load');ap.add_argument('--rollout-source');ap.add_argument('--performance-only',action='store_true');a=ap.parse_args()
 source=Path(a.source);raw=gzip.decompress(source.read_bytes()) if source.suffix=='.gz' else source.read_bytes();D=json.loads(raw);out=Path(a.out);out.mkdir(parents=True,exist_ok=True)
 assert D.get('cleanup_ok',True)
 failed=[x['name'] for x in D['assertions'] if not x['passed']]

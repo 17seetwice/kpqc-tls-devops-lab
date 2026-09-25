@@ -124,12 +124,12 @@ KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배�
 ### 1. 핸드셰이크 비용
 
 - 방법: 42개 KPQC 조합과 고전 기준선 비교. 지연·CPU·메시지 크기 계측, 메모리 별도 측정.
-- 결과: 초기 지연 1,290회·메모리 129회, 실행 순서 균형화 후속 지연 2,580회 분석. [구성별 결과](after_claude/balanced/README.md)
+- 결과: 초기 지연 1,290회·메모리 129회, 실행 순서 균형화 후속 지연 2,580회 분석. [구성별 결과](experiments/process-reuse/README.md)
 
 ### 2. 네트워크·동시 접속
 
 - 방법: 대표 5개 구성에서 MTU·추가 지연·HRR·동시 접속 수를 변경.
-- 결과: 추가 왕복 지연 30ms에서 HRR 비용 약 31ms 관측. 동시 부하 273,091회 연결 검증. [네트워크·처리량 결과](after_claude/systems/README.md)
+- 결과: 추가 왕복 지연 30ms에서 HRR 비용 약 31ms 관측. 동시 부하 273,091회 연결 검증. [네트워크·처리량 결과](experiments/network-and-load/README.md)
 
 ### 3. 암호 정책 게이트
 
@@ -139,7 +139,7 @@ KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배�
 ### 4. 성능 기반 배포 승인
 
 - 방법: 후보별 10회/초 × 10초 × 3구간. 실패율·200ms 내 성공률·p95·부하 생성 지연 검사.
-- 결과: 정상 두 후보 승인, 350ms 지연 후보 거절. 세 후보 모두 TLS 연결은 각각 300회 성공. [승인 기준과 결과](after_claude/release/README.md)
+- 결과: 정상 두 후보 승인, 350ms 지연 후보 거절. 세 후보 모두 TLS 연결은 각각 300회 성공. [승인 기준과 결과](experiments/deployment-recovery/README.md)
 
 ### 5. 전환·장애 복구
 
@@ -183,11 +183,11 @@ KPQC TLS의 실행 비용을 측정하고, 암호·성능 기준에 따른 배�
 | 새 프로세스 | 1.724ms | 3.891–12.218ms |
 | 프로세스 재사용 | 0.815ms | 2.852–11.500ms |
 
-클라이언트의 `SSL_connect` 호출 구간을 측정한 값입니다. 범위는 42개 구성의 중앙값 중 최솟값과 최댓값입니다. 서버는 새 프로세스 조건에서 연결마다 자식 프로세스를 생성합니다. 재사용 조건에서도 연결과 TLS 핸드셰이크는 매번 새로 수행합니다. [측정 방법과 전체 결과](after_claude/balanced/README.md)
+클라이언트의 `SSL_connect` 호출 구간을 측정한 값입니다. 범위는 42개 구성의 중앙값 중 최솟값과 최댓값입니다. 서버는 새 프로세스 조건에서 연결마다 자식 프로세스를 생성합니다. 재사용 조건에서도 연결과 TLS 핸드셰이크는 매번 새로 수행합니다. [측정 방법과 전체 결과](experiments/process-reuse/README.md)
 
 ## 배포 흐름
 
-![배포 및 복구 흐름](after_claude/release/architecture.ko.png)
+![배포 및 복구 흐름](experiments/deployment-recovery/architecture.ko.png)
 
 1. 최초 KPQC 배포 후보: 기존 X25519 + ECDSA P-256 서비스를 SMAUG1 + HAETAE2로 전환합니다.
 2. 후속 업데이트 후보: 동일 암호 조합을 유지하면서 새로운 서버 인증서와 별도 서버 프로세스로 갱신합니다. 업무 기능의 변경은 포함하지 않습니다.
@@ -211,7 +211,7 @@ SLO (Service Level Objective)는 시험 전에 고정한 모의 서비스 목표
 
 장애 주입 요청부터 감지 1.596초, 복구 확인 2.951초를 관측했습니다. 장애 관측 중 150회 접속에서 21회 실패했고, 마지막 20회는 복구된 이전 서비스로 모두 성공했습니다. 이 결과는 무중단 전환을 의미하지 않습니다.
 
-[한글 상세 보고서](after_claude/release/README.md) · [English report](after_claude/release/README.en.md) · [그림 모음](after_claude/release/gallery.html) · [원자료 검증](after_claude/release/audit.json)
+[한글 상세 보고서](experiments/deployment-recovery/README.md) · [English report](experiments/deployment-recovery/README.en.md) · [그림 모음](experiments/deployment-recovery/gallery.html) · [원자료 검증](experiments/deployment-recovery/audit.json)
 
 ## 암호 정책과 CI/CD
 
@@ -244,11 +244,11 @@ kpqc-tls-devops-lab/
 ├── policies/                        # 배포 승인 기준
 │   ├── pqc-required.json            # 허용 암호·금지 접속 정책
 │   └── release-slo.json             # 성능·복구 목표
-├── after_claude/                    # 공개 실험 보고서·원자료·그림
+├── experiments/                    # 공개 실험 보고서·원자료·그림
 │   ├── data/                        # 초기 측정·암호 게이트 기록
-│   ├── balanced/                    # 프로세스 재사용 여부 비교 결과
-│   ├── systems/                     # 네트워크·부하·전환 결과
-│   └── release/                     # 성능 승인·장애 복구 결과
+│   ├── process-reuse/                    # 프로세스 재사용 여부 비교 결과
+│   ├── network-and-load/                     # 네트워크·부하·전환 결과
+│   └── deployment-recovery/                     # 성능 승인·장애 복구 결과
 ├── docs/                            # 설정 가이드·실험 설명
 │   ├── lab-meeting/                 # 전체 실험 설명 MD·HTML
 │   └── assets/stack/                # 기술 스택 배지
@@ -256,25 +256,25 @@ kpqc-tls-devops-lab/
 └── compose.gate.yaml                # 로컬 게이트 실행 설정
 ```
 
-실행 후 생성되는 로컬 결과는 `artifacts/`에 저장됩니다. 공개 원자료는 `after_claude/`에서 확인할 수 있습니다.
+실행 후 생성되는 로컬 결과는 `artifacts/`에 저장됩니다. 공개 원자료는 `experiments/`에서 확인할 수 있습니다.
 
 ## 다른 실험 및 재현
 
 | 실험 | 문서 |
 |---|---|
-| 43개 암호 구성의 핸드셰이크·CPU·메모리 측정 | [환경](after_claude/01_environment.md) · [방법](after_claude/02_methods.md) · [결과](after_claude/03_results.md) |
-| 프로세스 재사용 여부에 따른 TLS 지연 비교 | [한국어](after_claude/balanced/README.md) · [English](after_claude/balanced/README.en.md) |
-| MTU·네트워크 지연·HelloRetryRequest·동시 부하·부하 중 배포 | [한국어](after_claude/systems/README.md) · [English](after_claude/systems/README.en.md) |
-| 전환·성능 승인·자동 복구 | [계획](docs/RELEASE_EXPERIMENT_PLAN.md) · [한국어](after_claude/release/README.md) · [English](after_claude/release/README.en.md) |
+| 43개 암호 구성의 핸드셰이크·CPU·메모리 측정 | [환경](experiments/01_environment.md) · [방법](experiments/02_methods.md) · [결과](experiments/03_results.md) |
+| 프로세스 재사용 여부에 따른 TLS 지연 비교 | [한국어](experiments/process-reuse/README.md) · [English](experiments/process-reuse/README.en.md) |
+| MTU·네트워크 지연·HelloRetryRequest·동시 부하·부하 중 배포 | [한국어](experiments/network-and-load/README.md) · [English](experiments/network-and-load/README.en.md) |
+| 전환·성능 승인·자동 복구 | [계획](docs/RELEASE_EXPERIMENT_PLAN.md) · [한국어](experiments/deployment-recovery/README.md) · [English](experiments/deployment-recovery/README.en.md) |
 
 각 실험은 환경과 측정 구간이 다르므로 개별 보고서의 조건과 실행 기록을 따릅니다. HTML 보고서와 그림 모음은 저장소를 내려받아 브라우저로 열 수 있습니다.
 
-원자료부터 확인하려면 [초기 집계 CSV](after_claude/data/summary.csv), [균형화 집계 CSV](after_claude/balanced/summary.csv), [암호 정책 시험 기록](after_claude/data/gate.public.json), [최종 배포 원자료](after_claude/release/measurements.public.json)를 참고하세요. 그래프는 [초기 측정](after_claude/gallery.html)·[균형화](after_claude/balanced/gallery.html)·[네트워크·부하](after_claude/systems/gallery.html)·[배포·복구](after_claude/release/gallery.html)별로 제공합니다.
+원자료부터 확인하려면 [초기 집계 CSV](experiments/data/summary.csv), [균형화 집계 CSV](experiments/process-reuse/summary.csv), [암호 정책 시험 기록](experiments/data/gate.public.json), [최종 배포 원자료](experiments/deployment-recovery/measurements.public.json)를 참고하세요. 그래프는 [초기 측정](experiments/gallery.html)·[균형화](experiments/process-reuse/gallery.html)·[네트워크·부하](experiments/network-and-load/gallery.html)·[배포·복구](experiments/deployment-recovery/gallery.html)별로 제공합니다.
 
 공개 배포 원자료의 판정과 수치를 AWS 실행 없이 다시 검증할 수 있습니다. 저장소 루트에서 실행하면 지정한 경로에 검증 요약이 생성됩니다.
 
 ```sh
-python3 scripts/audit_release.py after_claude/release/measurements.public.json --out /tmp/kpqc-release-audit
+python3 scripts/audit_release.py experiments/deployment-recovery/measurements.public.json --out /tmp/kpqc-release-audit
 ```
 
 핵심 코드: [TLS 계측](scripts/tls_handshake.c), [암호 정책](scripts/gate_policy.py), [성능 정책](scripts/release_policy.py), [전환·복구 실험](scripts/release_experiments.py), [AWS 실행·정리](scripts/ci_deploy.py). [AWS 설정 가이드](docs/aws-setup.md)
