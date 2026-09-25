@@ -94,7 +94,7 @@ SLO (Service Level Objective)는 시험 전에 고정한 **모의 서비스 목�
 
 ![자동 복구](ko/02-recovery.png)
 
-복구 시간은 제어기의 동일 단조 시계로 측정하며 SSH 제어 왕복 시간을 포함한다. 장애 기간의 실패를 숨기지 않으며 무중단 결과로 표현하지 않는다. 기존 TCP 세션이나 금융 거래의 보존을 검증한 것은 아니다.
+복구 시간은 제어기의 동일 단조 시계로 측정하며 SSH 제어 왕복 시간을 포함한다. 장애 기간의 실패를 숨기지 않으며 무중단 결과로 표현하지 않는다. 기존 TCP 세션이나 실제 업무 처리의 연속성을 검증한 것은 아니다.
 
 ## 구현 개선과 검토
 
@@ -102,7 +102,7 @@ SLO (Service Level Objective)는 시험 전에 고정한 **모의 서비스 목�
 
 Mac amd64 에뮬레이션 전체 시험에서는 정상 후보의 100개 중2개가200ms를 넘어서 성능 게이트가 거절한 기록도 보존했다. 기준을 완화하지 않고 네이티브 Linux 전체 사전시험 및 AWS 시험을 분리했다. 수치는 이번 AWS 실행에 한정한다.
 
-이 실험은 제한된 부하에서 승인·거절과 복구 경로의 기능을 보여준다. 최대 처리량·금융 업무 SLO·장기간 운영 가용성·자동 코드 변환을 입증하지 않는다. 고전→KPQC 전환과 이후 신규 배포 서비스에서 이전 승인 서비스로의 복구를 구분하며, 전환 후 고전 서비스로 복귀하지 않는다.
+이 실험은 제한된 부하에서 승인·거절과 복구 경로의 기능을 보여준다. 최대 처리량·실제 서비스 SLO·장기간 운영 가용성·자동 코드 변환을 입증하지 않는다. 고전→KPQC 전환과 이후 신규 배포 서비스에서 이전 승인 서비스로의 복구를 구분하며, 전환 후 고전 서비스로 복귀하지 않는다.
 
 [워크플로 증적](workflow.public.json) · [정리 확인](cleanup-verification.json) · [실험 계획](../../docs/RELEASE_EXPERIMENT_PLAN.md)
 '''
@@ -161,7 +161,7 @@ Idle accept-timeout exits in the prefork server were fixed; all eight workers an
 
 An earlier full Mac amd64-emulation trial rejected a healthy candidate because 2/100 attempts exceeded 200 ms. That failed trial is preserved; the target was not relaxed. Native Linux preflight and AWS execution are separate. These figures describe only the AWS execution.
 
-This bounded trial validates admission and recovery, not maximum capacity, banking-service SLOs, long-term availability or automatic source-code migration. Initial classical-to-KPQC migration and subsequent recovery to the previously approved KPQC deployment are distinct. No classical rollback is allowed after migration.
+This bounded trial validates admission and recovery, not maximum capacity, production-service SLOs, long-term availability or automatic source-code migration. Initial classical-to-KPQC migration and subsequent recovery to the previously approved KPQC deployment are distinct. No classical rollback is allowed after migration.
 
 [Workflow evidence](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Plan](../../docs/RELEASE_EXPERIMENT_PLAN.md)
 '''

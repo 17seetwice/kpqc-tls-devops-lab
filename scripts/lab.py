@@ -141,7 +141,7 @@ class Rejected(Exception):
     pass
 
 
-# 스키마 형식 검사와 실험용 잔액 일관성 검사를 구분한다. 형식 통과만으로 실제 금융 업무 적합성을 주장하지 않는다.
+# 스키마 형식 검사와 실험용 잔액 일관성 검사를 구분한다. 형식 통과만으로 실제 서비스 업무 적합성을 주장하지 않는다.
 def validate_xml(data, work, resource_path=None):
     if b"<!DOCTYPE" in data or b"<!ENTITY" in data:
         raise Rejected("xml_entities")

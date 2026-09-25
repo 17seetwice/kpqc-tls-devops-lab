@@ -22,7 +22,7 @@ Test client ── pre-TLS route selector ──> Lab TCP router :4433
 
 | Term | Meaning in this trial |
 |---|---|
-| Test client | The project's test program that sends a route selector, makes TLS connections and records results; it is not a browser or a real financial application |
+| Test client | The project's test program that sends a route selector, makes TLS connections and records results; it is not a browser or a production service client |
 | `active` | The service receiving new connections that use the `active` selector |
 | `candidate` | A service tested on a separate route before approval |
 | Promotion | Make an approved candidate the destination for future `active` connections |
@@ -71,7 +71,7 @@ Two different durations are recorded:
 | Connection completion latency (used for deployment SLO) | Scheduled arrival time to C-client process exit | Scheduling delay, process startup and initialization, TCP connection, readiness signal, TLS handshake and shutdown |
 | TLS handshake latency (reported separately) | Immediately before `SSL_connect` to its return | The TLS handshake call interval |
 
-The first metric checks whether the candidate meets the test service's response target. The second measures only the TLS call interval. Neither includes an HTTP request or a financial business transaction.
+The first metric checks whether the candidate meets the test service's response target. The second measures only the TLS call interval. Neither includes an HTTP request or real application work.
 
 ## Candidate roles and sequence
 
@@ -99,7 +99,7 @@ The trial proceeds as follows. Each step is linked to the code that implements i
 
    Ten attempts per second schedules a new connection about every 100 ms. The generator does not wait for the previous connection to finish before scheduling the next one.
 
-   Three windows are part of the experiment's pre-set policy. Each is evaluated separately, and all three must pass. They are not assumed to be statistically independent samples. The rate, duration and number of windows are lab test conditions, not a financial-sector standard. Final admission requires both the cryptographic/certificate checks and all three performance windows to pass. Implementation: [`release-slo.json`](../../../policies/release-slo.json), [`release_worker.py`](../../../scripts/release_worker.py#L37-L47), [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
+   Three windows are part of the experiment's pre-set policy. Each is evaluated separately, and all three must pass. They are not assumed to be statistically independent samples. The rate, duration and number of windows are lab test conditions, not an industry standard. Final admission requires both the cryptographic/certificate checks and all three performance windows to pass. Implementation: [`release-slo.json`](../../../policies/release-slo.json), [`release_worker.py`](../../../scripts/release_worker.py#L37-L47), [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
 
 3. If the TLS evidence and all three performance windows meet policy, switch the candidate to the active route. The promotion action checks the policy again immediately before changing the active-service pointer. Existing connections are not forcibly moved. Implementation: [`gate_worker.py`](../../../scripts/gate_worker.py#L196-L208).
 
@@ -162,13 +162,13 @@ The server-process group deployed by the subsequent update was stopped. After tw
 
 ![Automatic recovery](en/02-recovery.png)
 
-Recovery time uses the controller's monotonic clock and includes SSH control round trips. The 21 failures during the incident remain in the results. This does not demonstrate zero downtime. Existing TCP-session or financial-transaction continuity was not tested.
+Recovery time uses the controller's monotonic clock and includes SSH control round trips. The 21 failures during the incident remain in the results. This does not demonstrate zero downtime. Continuity of existing TCP sessions or application workflows was not tested.
 
 ## Implementation checks and scope
 
 - A server-worker exit after an idle `accept` timeout was fixed. Eight workers and a successful connection were confirmed after 17 seconds idle.
 - The previously approved service remained available as a recovery target while the next candidate was tested.
 - A Mac amd64-emulation preflight that rejected a healthy candidate when 2 of 100 attempts exceeded 200 ms is preserved separately. The target was not changed; native Linux preflight and AWS execution were kept separate.
-- These results describe one bounded AWS trial. They do not establish maximum throughput, banking-service SLOs, long-term availability or automatic source-code transformation.
+- These results describe one bounded AWS trial. They do not establish maximum throughput, production-service SLOs, long-term availability or automatic source-code transformation.
 
 [Workflow record](workflow.public.json) · [Cleanup verification](cleanup-verification.json) · [Experiment plan](../../../docs/RELEASE_EXPERIMENT_PLAN.md)

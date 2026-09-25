@@ -263,4 +263,4 @@ In the final deployment experiment, private keys reside in the server containerâ
 
 Repeated samples come from executions on the same instance pair. Independent replication across dates and instance pairs is outside the evaluated scope. The controller collecting and evaluating evidence is a trusted component.
 
-Results describe the project OpenSSL image under bounded laboratory load with directly trusted server certificates. Production PKI (Public Key Infrastructure) chains, long-term availability, financial transaction preservation and interoperability with other TLS implementations are outside the verified scope. EBS (Elastic Block Store) volumes remain after EC2 shutdown.
+Results describe the project OpenSSL image under bounded laboratory load with directly trusted server certificates. Production PKI (Public Key Infrastructure) chains, long-term availability, real application-workflow continuity and interoperability with other TLS implementations are outside the verified scope. EBS (Elastic Block Store) volumes remain after EC2 shutdown.

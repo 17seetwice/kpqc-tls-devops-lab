@@ -263,4 +263,4 @@ python3 scripts/audit_release.py experiments/devops/deployment-recovery/measurem
 
 반복 측정은 동일 인스턴스 쌍의 실행 안에서 수행했습니다. 여러 날짜·인스턴스 쌍의 독립 반복 검증은 포함하지 않습니다. 증적을 수집하고 판정하는 제어기는 신뢰하는 구성요소로 가정합니다.
 
-결과는 사용자 제작 OpenSSL 이미지, 제한된 실험 부하 및 직접 신뢰한 서버 인증서 조건의 관측입니다. 운영 PKI (Public Key Infrastructure) 체인, 장기간 가용성, 금융 거래 보존 및 다른 TLS 구현과의 상호운용은 검증 범위에 포함하지 않습니다. EC2 중지 후에도 EBS (Elastic Block Store) 볼륨은 유지됩니다.
+결과는 사용자 제작 OpenSSL 이미지, 제한된 실험 부하 및 직접 신뢰한 서버 인증서 조건의 관측입니다. 운영 PKI (Public Key Infrastructure) 체인, 장기간 가용성, 실제 업무 처리의 연속성 및 다른 TLS 구현과의 상호운용은 검증 범위에 포함하지 않습니다. EC2 중지 후에도 EBS (Elastic Block Store) 볼륨은 유지됩니다.
