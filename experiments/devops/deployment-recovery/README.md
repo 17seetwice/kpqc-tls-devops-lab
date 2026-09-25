@@ -34,7 +34,7 @@
 
 ## 시험 환경
 
-![배포 수명주기](architecture.ko.png)
+![시험 시스템 구성과 연결 경로](architecture.ko.png)
 
 | 항목 | 설정 |
 |---|---|

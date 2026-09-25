@@ -22,7 +22,7 @@
 <p>승인 전에는 기존 고전 암호 서비스가 <code>active</code>이고 KPQC 후보는 <code>candidate</code>다. 후보가 거절되면 기존 <code>active</code>는 그대로 둔다. 후보가 승인되면 새 연결부터 KPQC 서비스로 간다. 이미 맺어진 TLS 연결을 다른 서버로 옮기지는 않는다. 별도의 후속 업데이트도 먼저 승인한 뒤 장애를 주입하므로, <strong>배포 전 거절 시험</strong>과 <strong>배포 후 복구 시험</strong>은 서로 다른 시나리오다.</p>
 <p>고정 도착률 시험의 <code>10회/초 × 10초 × 3구간</code>은 한 시험 클라이언트가 후보마다 총 300개의 새 접속을 예약한다는 뜻이다. 세 구간은 각각 100회씩이며, 각 구간이 기준을 통과해야 한다. EC2나 클라이언트 컴퓨터를 300대 만드는 뜻은 아니다. 세 구간은 별도의 반복 부하 구간이지, 30초 연속 시험은 아니다.</p>
 <h2>시험 환경</h2>
-<p><img alt="배포 수명주기" src="architecture.ko.png"></p>
+<p><img alt="시험 시스템 구성과 연결 경로" src="architecture.ko.png"></p>
 <table><thead><tr><th>항목</th><th>설정</th></tr></thead><tbody>
 <tr><td>AWS 위치</td><td>서울 리전, 동일 가용 영역</td></tr>
 <tr><td>컴퓨터</td><td>EC2 <code>m7i.large</code> 2대: TLS 서버 1대, 시험 클라이언트 1대</td></tr>

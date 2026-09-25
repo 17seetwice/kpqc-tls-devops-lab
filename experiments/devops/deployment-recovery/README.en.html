@@ -22,7 +22,7 @@ Test client ── pre-TLS route selector ──&gt; Lab TCP router :4433
 <p>Before the first promotion, the classical service is <code>active</code> and the KPQC candidate is <code>candidate</code>. A rejected candidate leaves the existing <code>active</code> target unchanged. Promotion changes the destination for new connections; it does not move TLS connections that are already established. The later update is also approved before failure is injected, so <strong>pre-deployment rejection</strong> and <strong>post-deployment recovery</strong> are separate scenarios.</p>
 <p>The fixed-arrival test, <code>10 attempts/s × 10 seconds × 3 windows</code>, schedules 300 new connection attempts per candidate from one test client. Each window schedules 100 attempts and must pass on its own. This does not mean 300 EC2 instances or 300 client computers. The three windows are separate load windows, not one continuous 30-second test.</p>
 <h2>Test environment</h2>
-<p><img alt="Deployment lifecycle" src="architecture.en.png"></p>
+<p><img alt="Test system architecture and connection paths" src="architecture.en.png"></p>
 <table><thead><tr><th>Item</th><th>Setup</th></tr></thead><tbody>
 <tr><td>AWS location</td><td>Seoul Region, same Availability Zone</td></tr>
 <tr><td>Compute</td><td>Two <code>m7i.large</code> EC2 instances: one TLS server and one test client</td></tr>

@@ -56,7 +56,7 @@ for lang in ['ko','en']:
 
 ## 실행 환경과 승인 정책
 
-![배포 수명주기](architecture.ko.png)
+![시험 시스템 구성과 연결 경로](architecture.ko.png)
 
 서울 동일 가용 영역의 m7i.large 서버·클라이언트 두 대, 컨테이너별 2 CPU/512 MiB, MTU (Maximum Transmission Unit) 1500의 Docker 브리지 환경이다. 초기 서비스는 X25519 + ECDSA P-256, KPQC 후보는 SMAUG1 + HAETAE2다. 최초 KPQC 배포와 후속 업데이트는 동일 암호 조합을 사용하며, 서로 다른 인증서와 서버 프로세스로 구분한다. TLS (Transport Layer Security) 1.3의 전체 핸드셰이크를 사용하며, 직접 신뢰한 서버 인증서와 사전 준비된 전환 가능 클라이언트를 사용한다.
 
@@ -115,7 +115,7 @@ The existing TLS measurement and cryptographic gate now form one lifecycle: **cl
 
 ## Environment and preregistered target
 
-![Release lifecycle](architecture.en.png)
+![Test system architecture and connection paths](architecture.en.png)
 
 Two m7i.large instances in the same Seoul availability zone; each container has 2 CPUs/512 MiB, a Docker bridge and MTU (Maximum Transmission Unit) 1500. The original service uses X25519 + ECDSA P-256; candidates use SMAUG1 + HAETAE2. The initial KPQC release and subsequent update use the same algorithms, with distinct certificates and server processes. Full TLS (Transport Layer Security) 1.3 handshakes, directly trusted server certificates and migration-capable clients are assumed.
 
@@ -172,7 +172,7 @@ This bounded trial validates admission and recovery, not maximum capacity, produ
 gallery='<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KPQC release figures</title><style>body{max-width:1150px;margin:32px auto;padding:24px;font:16px/1.7 system-ui}img{max-width:100%}a{margin-right:20px}</style><h1>KPQC 전환·성능 승인·장애 복구</h1><nav><a href="README.html">한국어 보고서</a><a href="README.en.html">English report</a></nav>'
 for lang in ['ko','en']:
  gallery+=f'<h2>{"한국어" if lang=="ko" else "English"}</h2>'
- gallery+=f'<img src="architecture.{lang}.png" alt="Release lifecycle"><p><a href="architecture.{lang}.svg">SVG</a></p>'
+ gallery+=f'<img src="architecture.{lang}.png" alt="Test system architecture and connection paths"><p><a href="architecture.{lang}.svg">SVG</a></p>'
  for fig in ['01-admission','02-recovery']:gallery+=f'<img src="{lang}/{fig}.png" alt="{fig}"><p><a href="{lang}/{fig}.svg">SVG</a></p>'
 (P/'gallery.html').write_text(gallery+'</html>',encoding='utf-8')
 files=sorted(f for f in P.rglob('*') if f.is_file() and f.name!='SHA256SUMS');(P/'SHA256SUMS').write_text(''.join(hashlib.sha256(f.read_bytes()).hexdigest()+'  '+str(f.relative_to(P))+'\n' for f in files))

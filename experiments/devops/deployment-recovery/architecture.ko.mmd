@@ -1,11 +1,43 @@
-%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':24,'rankSpacing':30}}}%%
-flowchart TB
-  C["배포 후보"] --> G{"실제 TLS 암호·인증서 검증"}
-  G -->|통과| P{"고정 도착률 성능 검사"}
-  G -->|거절| K["기존 서비스 유지"]
-  P -->|기준 미달| K
-  P -->|승인| A["활성 경로 전환<br/>기존 암호 → KPQC 첫 배포 → KPQC 갱신"]
-  A --> H["실제 접속·인증서 상태 관측"]
-  H -->|"연속 실패 2회"| R{"이전 승인 서비스의 TLS 정상 확인"}
-  R -->|통과| B["이전 승인 KPQC 서비스 복구<br/>접속·암호 정책 재검증"]
-  R -->|불충족| X["자동 복구 거절<br/>고전 암호 복귀 금지"]
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F4F7FB','primaryBorderColor':'#5B6F86','primaryTextColor':'#172B45','lineColor':'#60748A','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'18px'},'flowchart':{'htmlLabels':true,'nodeSpacing':38,'rankSpacing':48,'curve':'basis'}}}%%
+flowchart LR
+  subgraph CONTROL["① GitHub Actions · 시험 제어"]
+    direction TB
+    CI["release_experiments.py<br/>시험 실행 · 판정 결과 수집<br/>승격 · 장애 감지 · 복구 지시"]
+  end
+
+  subgraph CLIENT["② 클라이언트 EC2"]
+    direction TB
+      TEST["시험 클라이언트<br/>release_worker.py · tls_handshake.c<br/>선택자를 보내고 실제 TLS 접속"]
+    RECORD["접속별 기록<br/>협상값 · 인증서 · 시간 · 성공/실패"]
+    TEST --> RECORD
+  end
+
+  subgraph SERVER["③ 서버 EC2 · 실험용 TLS 서비스"]
+    direction TB
+    WORKER["서버 측 시험 작업자<br/>release_worker.py · gate_worker.py<br/>암호·인증서·성능 판정<br/>후보 실행 · 경로 상태 갱신"]
+    POLICY["정책 파일<br/>pqc-required.json<br/>release-slo.json"]
+    STATE["route.json<br/>active · candidate · rollback의 내부 포트<br/>새 연결에 적용 · 기존 세션은 유지"]
+    ROUTER["실험용 TCP 라우터<br/>외부 포트 :4433<br/>TLS를 종료하지 않고 선택한 포트로 전달"]
+    ACTIVE["active 서버 프로세스<br/>초기 포트 :24430<br/>처음: X25519 + ECDSA P-256<br/>승인 후: KPQC 서비스"]
+    CANDIDATE["candidate 서버 프로세스<br/>KPQC 후보<br/>별도 포트 :24431 이상"]
+    PREVIOUS["이전 승인 KPQC 프로세스<br/>후속 업데이트 뒤 복구 대상으로 유지"]
+    POLICY -->|기준을 읽음| WORKER
+    WORKER -->|경로 상태를 기록| STATE
+    STATE -->|라우터가 경로를 읽음| ROUTER
+    ROUTER -->|active 목적지| ACTIVE
+    ROUTER -->|candidate 목적지| CANDIDATE
+    ROUTER -.->|rollback 목적지| PREVIOUS
+  end
+
+  CI -. SSH로 시험 명령 .-> TEST
+  CI -. SSH 명령 · 증적 · 판정 요청 .-> WORKER
+  WORKER -. 판정 결과 반환 .-> CI
+  TEST -->|"경로 선택자 먼저 전송<br/>active 또는 candidate · 실험용 평문"| ROUTER
+  RECORD -. 시험 결과를 모아 판정 .-> CI
+
+  classDef control fill:#E9E7FF,stroke:#6254C7,color:#29245E,stroke-width:1.5px;
+  classDef client fill:#E5F2FF,stroke:#3678B8,color:#153C61,stroke-width:1.5px;
+  classDef server fill:#E8F7F2,stroke:#16836B,color:#145647,stroke-width:1.5px;
+  class CI control;
+  class TEST,RECORD client;
+  class WORKER,POLICY,STATE,ROUTER,ACTIVE,CANDIDATE,PREVIOUS server;

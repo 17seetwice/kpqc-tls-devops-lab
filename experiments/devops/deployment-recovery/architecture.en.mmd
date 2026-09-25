@@ -1,11 +1,43 @@
-%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F5F7FA','primaryBorderColor':'#536779','primaryTextColor':'#182B3A','lineColor':'#536779','fontFamily':'Arial, Apple SD Gothic Neo','fontSize':'15px'},'flowchart':{'htmlLabels':true,'nodeSpacing':24,'rankSpacing':30}}}%%
-flowchart TB
-  C["Release candidate"] --> G{"Observed TLS and certificate checks"}
-  G -->|Pass| P{"Fixed-arrival performance gate"}
-  G -->|Reject| K["Retain current service"]
-  P -->|Fail SLO| K
-  P -->|Admit| A["Switch active route<br/>Classical → First KPQC release → KPQC update"]
-  A --> H["Connection and certificate health checks"]
-  H -->|"Two consecutive failures"| R{"Previous approved service passes TLS checks?"}
-  R -->|Yes| B["Restore approved KPQC version<br/>Revalidate connectivity and crypto policy"]
-  R -->|No| X["Reject automatic recovery<br/>No classical rollback"]
+%%{init: {'theme':'base','themeVariables':{'primaryColor':'#F4F7FB','primaryBorderColor':'#5B6F86','primaryTextColor':'#172B45','lineColor':'#60748A','fontFamily':'Arial, sans-serif','fontSize':'18px'},'flowchart':{'htmlLabels':true,'nodeSpacing':38,'rankSpacing':48,'curve':'basis'}}}%%
+flowchart LR
+  subgraph CONTROL["1. GitHub Actions · release control"]
+    direction TB
+    CI["release_experiments.py<br/>Run tests · collect decisions<br/>Request promotion · detect failure · recover"]
+  end
+
+  subgraph CLIENT["2. Client EC2"]
+    direction TB
+    TEST["Test client<br/>release_worker.py · tls_handshake.c<br/>Select route and make real TLS connection"]
+    RECORD["Per-connection records<br/>Negotiation · certificate · timing · result"]
+    TEST --> RECORD
+  end
+
+  subgraph SERVER["3. Server EC2 · lab TLS services"]
+    direction TB
+    WORKER["Server-side test workers<br/>release_worker.py · gate_worker.py<br/>Evaluate crypto, certificate and performance<br/>Start candidate · update route state"]
+    POLICY["Policy files<br/>pqc-required.json<br/>release-slo.json"]
+    STATE["route.json<br/>Backend ports for active · candidate · rollback<br/>New connections only; existing sessions stay"]
+    ROUTER["Lab TCP router<br/>External port :4433<br/>Relays bytes; does not terminate TLS"]
+    ACTIVE["active server process<br/>Initial port :24430<br/>Initially: X25519 + ECDSA P-256<br/>After approval: KPQC service"]
+    CANDIDATE["candidate server process<br/>KPQC candidate<br/>Separate port :24431 and above"]
+    PREVIOUS["Previously approved KPQC process<br/>Kept for recovery after a later update"]
+    POLICY -->|Read criteria| WORKER
+    WORKER -->|Write route state| STATE
+    STATE -->|Router reads route state| ROUTER
+    ROUTER -->|active destination| ACTIVE
+    ROUTER -->|candidate destination| CANDIDATE
+    ROUTER -.->|rollback destination| PREVIOUS
+  end
+
+  CI -. SSH test commands .-> TEST
+  CI -. SSH commands · evidence · decision request .-> WORKER
+  WORKER -. Return decision .-> CI
+  TEST -->|"Send selector first<br/>active or candidate · lab-only plaintext"| ROUTER
+  RECORD -. Collect evidence for decision .-> CI
+
+  classDef control fill:#E9E7FF,stroke:#6254C7,color:#29245E,stroke-width:1.5px;
+  classDef client fill:#E5F2FF,stroke:#3678B8,color:#153C61,stroke-width:1.5px;
+  classDef server fill:#E8F7F2,stroke:#16836B,color:#145647,stroke-width:1.5px;
+  class CI control;
+  class TEST,RECORD client;
+  class WORKER,POLICY,STATE,ROUTER,ACTIVE,CANDIDATE,PREVIOUS server;

@@ -34,7 +34,7 @@ The fixed-arrival test, `10 attempts/s × 10 seconds × 3 windows`, schedules 30
 
 ## Test environment
 
-![Deployment lifecycle](architecture.en.png)
+![Test system architecture and connection paths](architecture.en.png)
 
 | Item | Setup |
 |---|---|
