@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+
+#tls_handshake.c가 연결 한 번을 어떻게 측정하는지, extended_handshake.py 어떤 암호 조합을 어떤 순서로 몇 번 측정하는지를 제어하는지 체크
 """Randomized full-handshake blocks; warm/cold latency and separate RSS experiment."""
 import argparse,json,os,random,shlex,subprocess,time
 from pathlib import Path
@@ -33,9 +35,11 @@ try:
     trust=worker('server',{'action':'init-server'});worker('client',{'action':'init-client','trust':trust['trust']})
     D['metadata_before']={r:worker(r,{'action':'metadata'}) for r in hosts}
     if not args.balanced:D['memory_selftests']={r:worker(r,{'action':'memory-selftest'}) for r in hosts}
+    #어떤 암호 조합을 비교했는가
     codes={'X25519':29,'smaug1':65056,'smaug3':65059,'smaug5':65062,'ntruplus_kem576':65064,'ntruplus_kem768':65067,'ntruplus_kem864':65070,'ntruplus_kem1152':65073}
     sigs={'EC':1027,'haetae2':65408,'haetae3':65409,'haetae5':65410,'aimer128f':65411,'aimer192f':65413,'aimer256f':65415}
     pairs=[('X25519','EC')]+[(k,s) for k in codes if k!='X25519' for s in sigs if s!='EC']
+    
     if args.smoke:pairs=[('X25519','EC'),('smaug1','haetae2'),('ntruplus_kem768','aimer128f')]
     rng=random.Random(D['random_seed'])
     schedule=[]
@@ -55,6 +59,7 @@ try:
         # Sentinels bracket each block; marked separately to avoid baseline weighting bias.
         order=[('X25519','EC')]+order+[('X25519','EC')]
         rd={'mode':mode,'block':block,'started_at':datetime.now(timezone.utc).isoformat(),'profiles':[]};D['rounds'].append(rd)
+        #구성마다 몇 번 측정했는가 : 새 프로세스 cold(3회)), 프로세스 재사용 warm(5회, 처음 2회 제외 나머지 3회),메모리 memory(3회)
         for index,(k,s) in enumerate(order):
             tag=f'{mode}-{block}-{index}-{k}-{s}';count=5 if mode=='warm' else 3
             q={'kem':k,'signature':s,'tag':tag,'count':count,'warm':mode=='warm','memory':mode=='memory'}

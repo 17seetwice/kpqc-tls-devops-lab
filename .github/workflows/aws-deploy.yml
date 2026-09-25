@@ -1,5 +1,6 @@
 name: AWS PQC deployment gates
 # Actions 화면에서 수동 실행한다. push/PR마다 유료 EC2 실험을 시작하지 않는다.
+# GitHub Actions에서 자동 실행
 on:
   workflow_dispatch:
     inputs:

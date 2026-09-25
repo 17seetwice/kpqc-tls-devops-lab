@@ -1,4 +1,5 @@
 """Recompute admission from every offered attempt, under a fixed lab SLO."""
+#지연·실패율로 성능 기준 판단
 import math
 import time
 

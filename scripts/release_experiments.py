@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#배포·장애 주입·복구의 전체 순서
 """One release lifecycle: classical service, SLO admission, PQC recovery."""
 import argparse,json,os,shlex,subprocess,time
 from pathlib import Path

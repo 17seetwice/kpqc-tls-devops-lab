@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#AWS에서 실제로 EC2 시작 → 이미지 전달·확인 → 실험 실행 → 중지·정리를 어떻게 자동화했는지
 """GitHub-hosted runner -> two existing EC2 lab nodes; no permanent AWS keys."""
 import argparse
 import ipaddress
