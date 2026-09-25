@@ -6,6 +6,27 @@ An OpenSSL-based project that **measures KPQC TLS handshake performance, admits 
 
 The project uses [`dmfive/kpqc-ossl3`](https://hub.docker.com/r/dmfive/kpqc-ossl3). Performance experiments cover SMAUG and NTRU+ KEMs (Key Encapsulation Mechanisms), with HAETAE and AIMer signatures. The migration and recovery experiment uses SMAUG1 + HAETAE2.
 
+## Research questions and tests
+
+| Question | Method |
+|---|---|
+| How do cryptographic configurations and process reuse affect handshake cost? | Compare 42 KPQC combinations and one classical baseline, balancing fresh/reused-process execution order. Both modes perform full handshakes without session resumption. |
+| Is successful KPQC connectivity sufficient for deployment? | Require approved connections to succeed and forbidden connections to fail. A candidate accepting both SMAUG1 and X25519 is rejected even when its KPQC connection succeeds. |
+| What if a cryptographically compliant candidate is slow or fails after deployment? | Apply fixed-arrival-rate performance checks, then recheck the previous approved KPQC service before restoring routing after a process failure. |
+
+The [full walkthrough (Korean)](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.md) explains the objectives, environment, methods and results. Download its [HTML version](docs/lab-meeting/PROJECT_WALKTHROUGH.ko.html) to view it in a browser.
+
+## TLS handshake performance
+
+The balanced follow-up analyzed 2,580 connections: 43 configurations × 2 modes × 30 measurements. Preparation and monitoring connections were excluded from analysis.
+
+| Execution mode | X25519 + ECDSA P-256 median | Range of KPQC configuration medians |
+|---|---:|---:|
+| Fresh process | 1.724 ms | 3.891–12.218 ms |
+| Reused process | 0.815 ms | 2.852–11.500 ms |
+
+Measurements span the client's `SSL_connect` call. Each range gives the smallest and largest median across 42 KPQC configurations. In fresh-process mode, the server forks a child per connection. Reused-process mode still creates a new connection and performs a full TLS handshake each time. [Methods and complete results](after_claude/balanced/README.en.md)
+
 ## Deployment lifecycle
 
 ![Deployment and recovery](after_claude/release/architecture.en.png)
@@ -36,7 +57,7 @@ From the fault-injection request, **detection took 1.596 s and verified recovery
 
 ## Cryptographic policy and CI/CD
 
-Policy requires TLS 1.3, SMAUG1, HAETAE2 and TLS_AES_256_GCM_SHA384. KEM and signature identifiers are checked separately from the cipher suite. Tests cover classical KEM/signature acceptance, TLS 1.2, invalid certificates, mismatched or stale evidence and probe errors.
+Policy requires TLS 1.3, SMAUG1, HAETAE2 and TLS_AES_256_GCM_SHA384. KEM and signature identifiers are checked separately from the cipher suite. Tests cover classical KEM/signature acceptance, TLS 1.2, certificate verification results, mismatched certificate fingerprints or stale evidence and probe errors.
 
 GitHub Actions builds and tests the image locally, obtains temporary AWS credentials through OIDC (OpenID Connect), and uses SSH (Secure Shell) to deploy the identical image to the existing server and client. It saves evidence, stops both EC2 instances and removes temporary SSH ingress. Push-triggered CI does not start EC2 instances.
 
@@ -63,5 +84,9 @@ docker compose -f compose.gate.yaml run --build --rm gate
 ```
 
 Core code: [TLS instrumentation](scripts/tls_handshake.c), [cryptographic policy](scripts/gate_policy.py), [performance policy](scripts/release_policy.py), [migration/recovery experiment](scripts/release_experiments.py), [AWS lifecycle](scripts/ci_deploy.py). [AWS setup guide](docs/aws-setup.en.md)
+
+The injected fault stops server processes; the previous approved service remains on the same EC2 instance. The experimental TCP router changes destinations for new connections. Production load-balancer draining and instance or availability-zone failure recovery were not tested.
+
+In the final deployment experiment, private keys reside in the server container’s temporary memory filesystem (`tmpfs`) and are removed with the container during cleanup. Only public trust certificates are supplied to the client. A separate production key-management system is not implemented.
 
 Results describe the project OpenSSL image under bounded laboratory load with directly trusted server certificates. Production PKI (Public Key Infrastructure) chains, long-term availability, financial transaction preservation and interoperability with other TLS implementations are outside the verified scope. EBS (Elastic Block Store) volumes remain after EC2 shutdown.
