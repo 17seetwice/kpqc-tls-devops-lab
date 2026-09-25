@@ -111,7 +111,7 @@ Results are written to `artifacts/local-extended-TIMESTAMP/results.json`. Remove
 
 Follow the [setup guide](docs/aws-setup.en.md) to prepare two lab EC2 instances and GitHub Actions Secrets. Open Actions → `AWS PQC deployment gates` → `Run workflow` and select the required experiment.
 
-- `balanced_latency`: balanced-order measurements across 43 configurations.
+- `balanced_latency`: fresh/reused-process comparison across 43 configurations.
 - `systems_experiments`: MTU, network delay, HRR, concurrent load and deployment under load.
 - `release_lifecycle`: classical-to-KPQC migration, performance admission and recovery.
 
@@ -246,7 +246,7 @@ kpqc-tls-devops-lab/
 │   └── release-slo.json             # Performance and recovery objectives
 ├── after_claude/                    # Published reports, evidence and plots
 │   ├── data/                        # Initial measurement and gate records
-│   ├── balanced/                    # Balanced-order results
+│   ├── balanced/                    # Fresh/reused-process results
 │   ├── systems/                     # Network, load and deployment results
 │   └── release/                     # Admission and recovery results
 ├── docs/                            # Setup guides and walkthrough
@@ -263,7 +263,7 @@ Local runs write generated results to `artifacts/`. Published evidence is availa
 | Experiment | Documentation |
 |---|---|
 | Handshake, CPU and memory across 43 configurations | [Environment](after_claude/01_environment.md) · [Methods](after_claude/02_methods.md) · [Results](after_claude/03_results.md) · [English captions](after_claude/captions.en.md) |
-| Balanced fresh/reused-process execution order | [English](after_claude/balanced/README.en.md) · [한국어](after_claude/balanced/README.md) |
+| TLS latency with fresh and reused processes | [English](after_claude/balanced/README.en.md) · [한국어](after_claude/balanced/README.md) |
 | MTU, network delay, HelloRetryRequest, concurrency and deployment under load | [English](after_claude/systems/README.en.md) · [한국어](after_claude/systems/README.md) |
 | Migration, performance admission and automatic recovery | [Plan](docs/RELEASE_EXPERIMENT_PLAN.md) · [English](after_claude/release/README.en.md) · [한국어](after_claude/release/README.md) |
 

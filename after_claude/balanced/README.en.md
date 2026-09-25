@@ -1,8 +1,47 @@
-# Balanced-order TLS latency experiment
+# TLS handshake latency with fresh and reused processes
 
-[한국어](README.md) | **English**
+[한국어](README.md) | English
 
 Run: `aws-extended-20260924T134811Z` · Source: `cfd6bcc` · [GitHub Actions evidence](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36007402798)
+
+## What is being compared?
+
+The experiment compares TLS handshake latency for the same cryptographic configuration when the test program starts afresh for each connection versus when a running process creates another connection.
+
+### What is a process?
+
+A program is an executable file; a process is a running instance of that program. Starting `tls_handshake` gives it memory, execution state and a PID (Process ID). Separate executions of the same program can create different processes.
+
+Here, processes are the server/client test programs. EC2 instances and containers are not recreated for every connection. An open port alone does not establish whether a process is being reused.
+
+### Fresh versus reused processes
+
+- Fresh process (cold): start a new client program for each connection. The listening server parent forks a child per connection; that child prepares the TLS configuration and performs the handshake.
+- Reused process (warm): retain the process and OpenSSL configuration object (`SSL_CTX`) within repeated measurements of one configuration. Perform two preparation connections, then analyze three connections.
+- Both modes: create a new TCP (Transmission Control Protocol) connection and per-connection TLS object each time, performing a full handshake. TLS session resumption via session tickets is disabled.
+
+```text
+Fresh:  start and configure → connect and complete handshake → exit → start again
+Reused: start and configure → connect and complete handshake → close connection → connect again in the same process
+```
+
+Reuse is scoped to repeated connections for one configuration, not one process for all algorithms. Cold does not mean that operating-system caches were forcibly cleared.
+
+### Why change the measurement order?
+
+If fresh-process trials always run first, reused-process trials are always measured later. CPU load or cache state may change during that interval, mixing execution-time effects with process-reuse effects.
+
+A block pairs one measurement sequence for each mode. Ten blocks were run:
+
+- Five blocks: fresh-process mode → reused-process mode.
+- Five blocks: reused-process mode → fresh-process mode.
+- The block order was shuffled. Within each block, the 43 configurations were randomized, with the same configuration order used for both modes.
+
+This is balanced execution order: both modes start first equally often. Process reuse is the comparison of interest; balancing is a design choice that reduces systematic first/last ordering bias.
+
+### What does the timer include?
+
+Process creation, explicit TLS configuration, TCP establishment and the experimental readiness signal precede timing. The main metric is elapsed time around the client's `SSL_connect` call, not total program startup time. Initialization first performed inside the call and cache-state effects may still contribute.
 
 ## Design and validation
 
@@ -21,11 +60,11 @@ ECDSA denotes Elliptic Curve Digital Signature Algorithm and PQC denotes Post-Qu
 
 ![SMAUG latency](en/latency_smaug.png)
 
-**Figure 1. Baseline and SMAUG handshake latency.** Each point is the median of 30 connections per configuration and mode. Both modes perform full handshakes. Tiny differences between points rounding to the same value should not be interpreted as practical improvements.
+Figure 1. Baseline and SMAUG handshake latency. Each point is the median of 30 connections per configuration and mode. Both modes perform full handshakes. Tiny differences between points rounding to the same value should not be interpreted as practical improvements.
 
 ![NTRU+ latency](en/latency_ntru.png)
 
-**Figure 2. NTRU+ handshake latency.** Measurement conditions, aggregation and axis limits match Figure 1.
+Figure 2. NTRU+ handshake latency. Measurement conditions, aggregation and axis limits match Figure 1.
 
 ## Interpretation
 
@@ -45,4 +84,4 @@ Cleanup evidence reports completion with no errors. A separate AWS API (Applicat
 .venv/bin/python 'after_claude/scripts/analyze_balanced.py' 'after_claude/balanced/measurements.public.json' 'after_claude/balanced'
 ```
 
-`measurements.public.json` contains the public workflow measurements; `workflow.public.json` contains gate and cleanup evidence. `summary.csv`, `blocks.csv` and `paired.csv` hold configuration medians, block medians and paired-mode ratios. `audit.json` records the validation summary. This local review package has not replaced the existing repository result tables.
+`measurements.public.json` contains the public workflow measurements; `workflow.public.json` contains gate and cleanup evidence. `summary.csv`, `blocks.csv` and `paired.csv` hold configuration medians, block medians and paired-mode ratios. `audit.json` records the validation summary.

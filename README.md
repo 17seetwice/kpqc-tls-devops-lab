@@ -111,7 +111,7 @@ docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scri
 
 [설정 가이드](docs/aws-setup.md)에 따라 실험용 EC2 두 대와 GitHub Actions Secrets를 준비한 뒤, Actions의 `AWS PQC deployment gates` → `Run workflow`에서 필요한 실험을 선택합니다.
 
-- `balanced_latency`: 43개 구성의 실행 순서 균형화 측정.
+- `balanced_latency`: 43개 구성의 새 프로세스·재사용 조건 비교.
 - `systems_experiments`: MTU·네트워크 지연·HRR·동시 부하·부하 중 전환.
 - `release_lifecycle`: 고전 암호에서 KPQC로 전환·성능 승인·장애 복구.
 
@@ -246,7 +246,7 @@ kpqc-tls-devops-lab/
 │   └── release-slo.json             # 성능·복구 목표
 ├── after_claude/                    # 공개 실험 보고서·원자료·그림
 │   ├── data/                        # 초기 측정·암호 게이트 기록
-│   ├── balanced/                    # 실행 순서 균형화 결과
+│   ├── balanced/                    # 프로세스 재사용 여부 비교 결과
 │   ├── systems/                     # 네트워크·부하·전환 결과
 │   └── release/                     # 성능 승인·장애 복구 결과
 ├── docs/                            # 설정 가이드·실험 설명
@@ -263,7 +263,7 @@ kpqc-tls-devops-lab/
 | 실험 | 문서 |
 |---|---|
 | 43개 암호 구성의 핸드셰이크·CPU·메모리 측정 | [환경](after_claude/01_environment.md) · [방법](after_claude/02_methods.md) · [결과](after_claude/03_results.md) |
-| 새 프로세스·재사용 프로세스의 실행 순서 균형화 | [한국어](after_claude/balanced/README.md) · [English](after_claude/balanced/README.en.md) |
+| 프로세스 재사용 여부에 따른 TLS 지연 비교 | [한국어](after_claude/balanced/README.md) · [English](after_claude/balanced/README.en.md) |
 | MTU·네트워크 지연·HelloRetryRequest·동시 부하·부하 중 배포 | [한국어](after_claude/systems/README.md) · [English](after_claude/systems/README.en.md) |
 | 전환·성능 승인·자동 복구 | [계획](docs/RELEASE_EXPERIMENT_PLAN.md) · [한국어](after_claude/release/README.md) · [English](after_claude/release/README.en.md) |
 
