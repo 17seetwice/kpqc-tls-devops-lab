@@ -4,6 +4,34 @@
 
 This Seoul Region trial moved a service from classical cryptography to KPQC, admitted a later update, and restored the previously approved KPQC service after the new service failed. The [GitHub Actions run](https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708) passed 24 checks. After the run, both EC2 instances were stopped and the temporary SSH ingress rule was removed.
 
+## Deployment experiment overview
+
+This trial checks a simple release pattern: **start a new KPQC server separately, test it, and direct new connections to it only after it passes**. If a candidate fails before release, the current service stays active. If an already-approved update fails after release, new connections return to the previously approved KPQC service.
+
+```text
+Test controller (release_experiments.py)
+        │ starts candidates · evaluates evidence · requests promotion/recovery
+        ├──────────────> route.json (routing state read by the router)
+        │
+Test client ── pre-TLS route selector ──> Lab TCP router :4433
+                                           ├── active ─────> current service
+                                           └── candidate ─> service under test
+```
+
+`active` and `candidate` are route names, not cryptographic algorithms. The test client chooses which route selector to send for each connection. The router reads the selector and `route.json`, connects to the selected backend, and relays the TLS bytes. **TLS does not automatically direct a client to a KPQC or classical server.** The selector and router are lab controls created to run this experiment.
+
+| Term | Meaning in this trial |
+|---|---|
+| Test client | The project's test program that sends a route selector, makes TLS connections and records results; it is not a browser or a real financial application |
+| `active` | The service receiving new connections that use the `active` selector |
+| `candidate` | A service tested on a separate route before approval |
+| Promotion | Make an approved candidate the destination for future `active` connections |
+| Recovery (rollback) | After a deployed service fails, verify the earlier approved KPQC service and direct future connections back to it |
+
+Before the first promotion, the classical service is `active` and the KPQC candidate is `candidate`. A rejected candidate leaves the existing `active` target unchanged. Promotion changes the destination for new connections; it does not move TLS connections that are already established. The later update is also approved before failure is injected, so **pre-deployment rejection** and **post-deployment recovery** are separate scenarios.
+
+The fixed-arrival test, `10 attempts/s × 10 seconds × 3 windows`, schedules 300 new connection attempts per candidate from one test client. Each window schedules 100 attempts and must pass on its own. This does not mean 300 EC2 instances or 300 client computers. The three windows are separate load windows, not one continuous 30-second test.
+
 ## Test environment
 
 ![Deployment lifecycle](architecture.en.png)
@@ -54,6 +82,8 @@ The first metric checks whether the candidate meets the test service's response 
 | Previously approved service | The approved KPQC service used as the recovery target after the subsequent update fails | Route traffic back to this service instead of the failed candidate |
 
 The trial proceeds as follows. Each step is linked to the code that implements it.
+
+![Candidate routes during testing and new connections after approval](routing-mechanism.en.svg)
 
 1. Keep the existing X25519 + ECDSA P-256 service running on the `active` route. Start the SMAUG1 + HAETAE2 candidate as a separate server process on a separate port. It does not replace the active service yet. Implementation: [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
 

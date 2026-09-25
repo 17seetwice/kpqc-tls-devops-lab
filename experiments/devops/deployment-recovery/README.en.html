@@ -2,6 +2,25 @@
 <h1>KPQC migration, deployment admission and recovery</h1>
 <p><a href="README.html">한국어</a> · <a href="gallery.html">Gallery</a> · <a href="measurements.public.json">Raw records</a> · <a href="audit.json">Audit</a></p>
 <p>This Seoul Region trial moved a service from classical cryptography to KPQC, admitted a later update, and restored the previously approved KPQC service after the new service failed. The <a href="https://github.com/17seetwice/kpqc-tls-devops-lab/actions/runs/36032662708">GitHub Actions run</a> passed 24 checks. After the run, both EC2 instances were stopped and the temporary SSH ingress rule was removed.</p>
+<h2>Deployment experiment overview</h2>
+<p>This trial checks a simple release pattern: <strong>start a new KPQC server separately, test it, and direct new connections to it only after it passes</strong>. If a candidate fails before release, the current service stays active. If an already-approved update fails after release, new connections return to the previously approved KPQC service.</p>
+<pre><code>Test controller (release_experiments.py)
+        │ starts candidates · evaluates evidence · requests promotion/recovery
+        ├──────────────&gt; route.json (routing state read by the router)
+        │
+Test client ── pre-TLS route selector ──&gt; Lab TCP router :4433
+                                           ├── active ─────&gt; current service
+                                           └── candidate ─&gt; service under test</code></pre>
+<p><code>active</code> and <code>candidate</code> are route names, not cryptographic algorithms. The test client chooses which route selector to send for each connection. The router reads the selector and <code>route.json</code>, connects to the selected backend, and relays the TLS bytes. <strong>TLS does not automatically direct a client to a KPQC or classical server.</strong> The selector and router are lab controls created to run this experiment.</p>
+<table><thead><tr><th>Term</th><th>Meaning in this trial</th></tr></thead><tbody>
+<tr><td>Test client</td><td>The project's test program that sends a route selector, makes TLS connections and records results; it is not a browser or a real financial application</td></tr>
+<tr><td><code>active</code></td><td>The service receiving new connections that use the <code>active</code> selector</td></tr>
+<tr><td><code>candidate</code></td><td>A service tested on a separate route before approval</td></tr>
+<tr><td>Promotion</td><td>Make an approved candidate the destination for future <code>active</code> connections</td></tr>
+<tr><td>Recovery (rollback)</td><td>After a deployed service fails, verify the earlier approved KPQC service and direct future connections back to it</td></tr>
+</tbody></table>
+<p>Before the first promotion, the classical service is <code>active</code> and the KPQC candidate is <code>candidate</code>. A rejected candidate leaves the existing <code>active</code> target unchanged. Promotion changes the destination for new connections; it does not move TLS connections that are already established. The later update is also approved before failure is injected, so <strong>pre-deployment rejection</strong> and <strong>post-deployment recovery</strong> are separate scenarios.</p>
+<p>The fixed-arrival test, <code>10 attempts/s × 10 seconds × 3 windows</code>, schedules 300 new connection attempts per candidate from one test client. Each window schedules 100 attempts and must pass on its own. This does not mean 300 EC2 instances or 300 client computers. The three windows are separate load windows, not one continuous 30-second test.</p>
 <h2>Test environment</h2>
 <p><img alt="Deployment lifecycle" src="architecture.en.png"></p>
 <table><thead><tr><th>Item</th><th>Setup</th></tr></thead><tbody>
@@ -40,6 +59,7 @@
 <tr><td>Previously approved service</td><td>The approved KPQC service used as the recovery target after the subsequent update fails</td><td>Route traffic back to this service instead of the failed candidate</td></tr>
 </tbody></table>
 <p>The trial proceeds as follows. Each step is linked to the code that implements it.</p>
+<p><img alt="Candidate routes during testing and new connections after approval" src="routing-mechanism.en.svg"></p>
 <ol>
 <li>Keep the existing X25519 + ECDSA P-256 service running on the <code>active</code> route. Start the SMAUG1 + HAETAE2 candidate as a separate server process on a separate port. It does not replace the active service yet. Implementation: <a href="../../../scripts/gate_worker.py#L162-L175">`gate_worker.py`</a>.</li>
 </ol>
