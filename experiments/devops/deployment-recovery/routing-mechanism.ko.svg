@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1020" viewBox="0 0 1600 1020" role="img" aria-labelledby="title desc">
+<title id="title">실험용 TCP 라우터와 실제 TLS 연결</title><desc id="desc">경로 선택은 실험 제어기가 지정하며, 암호 협상은 선택된 서버와 클라이언트가 수행한다.</desc>
+<defs>
+<marker id="aBlue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#2878B8"/></marker>
+<marker id="aPurple" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7554B8"/></marker>
+<marker id="aGray" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7B8997"/></marker>
+</defs><rect width="1600" height="1020" fill="#fff"/>
+<text x="55" y="62" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="38" font-weight="700" fill="#182B3A">실험용 TCP 라우터와 실제 TLS 연결</text>
+<text x="55" y="103" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="22" font-weight="400" fill="#536779">경로 선택은 실험 제어기가 지정하며, 암호 협상은 선택된 서버와 클라이언트가 수행한다.</text>
+<rect x="40" y="135" width="740" height="700" rx="22" fill="#F8FAFC" stroke="#D7E0E8" stroke-width="2"/>
+<rect x="820" y="135" width="740" height="700" rx="22" fill="#F8FAFC" stroke="#D7E0E8" stroke-width="2"/>
+<text x="75" y="190" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="29" font-weight="700" fill="#182B3A">1. 후보 시험 중</text>
+<text x="75" y="225" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="19" font-weight="400" fill="#657587">기존 서버와 KPQC 후보를 별도로 실행</text>
+<text x="855" y="190" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="29" font-weight="700" fill="#182B3A">2. 후보 승인 후</text>
+<text x="855" y="225" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="19" font-weight="400" fill="#657587">active 목적지가 바뀌는 것은 신규 연결부터</text>
+<path d="M245 488H300" stroke="#2878B8" stroke-width="5" fill="none" marker-end="url(#aBlue)"/>
+<path d="M520 450C545 450 548 355 580 355" stroke="#2878B8" stroke-width="5" fill="none" marker-end="url(#aBlue)"/>
+<path d="M520 525C545 525 548 620 580 620" stroke="#7554B8" stroke-width="5" fill="none" marker-end="url(#aPurple)"/>
+<rect x="75" y="420" width="170" height="140" rx="16" fill="#EAF4FC" stroke="#2878B8" stroke-width="2"/>
+<g fill="none" stroke="#2878B8" stroke-width="3"><rect x="132" y="438" width="55" height="37" rx="4"/><path d="M125 482h69l-8 7h-53z" fill="#2878B8"/></g>
+<text x="160" y="510" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="21" font-weight="700" fill="#203040">시험 클라이언트</text>
+<text x="160" y="537" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="16" font-weight="400" fill="#657587">제어기가 경로를 지정</text>
+<rect x="300" y="405" width="220" height="170" rx="16" fill="#EEF1F5" stroke="#536779" stroke-width="2"/>
+<circle cx="392" cy="438" r="6" fill="#536779"/><circle cx="411" cy="438" r="6" fill="#536779"/><circle cx="430" cy="438" r="6" fill="#536779"/><path d="M390 458h44" stroke="#536779" stroke-width="3"/>
+<text x="410" y="480" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="21" font-weight="700" fill="#203040">실험용 TCP 라우터</text>
+<text x="410" y="505" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="19" font-weight="700" fill="#2878B8">TCP :4433</text>
+<text x="410" y="535" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="16" font-weight="400" fill="#536779">TLS 전 선택자 처리</text>
+<text x="410" y="557" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="16" font-weight="400" fill="#536779">이후 TLS 바이트 중계</text>
+<rect x="580" y="280" width="170" height="150" rx="16" fill="#FFF5E8" stroke="#D08B2F" stroke-width="2"/>
+<g><rect x="597" y="298" width="46" height="50" rx="6" fill="#C17E20"/><path d="M606 311h28M606 323h28M606 335h28" stroke="#fff" stroke-width="3"/><circle cx="605" cy="311" r="2" fill="#fff"/></g>
+<text x="674" y="368" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="700" fill="#9B5C0D">기존 서버</text>
+<text x="674" y="393" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="14" font-weight="400" fill="#203040">X25519 + ECDSA P-256</text>
+<text x="674" y="416" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#657587">실제 TLS 종단</text>
+<rect x="580" y="545" width="170" height="150" rx="16" fill="#F2EDFB" stroke="#7554B8" stroke-width="2"/>
+<g><rect x="597" y="563" width="46" height="50" rx="6" fill="#7554B8"/><path d="M606 576h28M606 588h28M606 600h28" stroke="#fff" stroke-width="3"/><circle cx="605" cy="576" r="2" fill="#fff"/></g>
+<text x="674" y="633" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="700" fill="#6442A5">KPQC 후보</text>
+<text x="674" y="658" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#203040">SMAUG1 + HAETAE2</text>
+<text x="674" y="682" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#657587">실제 TLS 종단</text>
+<rect x="105" y="735" width="16" height="16" rx="3" fill="#2878B8"/><text x="132" y="750" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" fill="#536779">active 경로 → 기존 서버</text><rect x="400" y="735" width="16" height="16" rx="3" fill="#7554B8"/><text x="427" y="750" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" fill="#536779">candidate 경로 → KPQC 후보</text>
+<path d="M1025 488H1080" stroke="#2878B8" stroke-width="5" fill="none" marker-end="url(#aBlue)"/>
+<path d="M1300 450C1325 450 1328 355 1350 355" stroke="#7554B8" stroke-width="5" fill="none" marker-end="url(#aPurple)"/>
+<path d="M1300 535C1320 535 1328 620 1350 620" stroke="#7B8997" stroke-width="4" stroke-dasharray="10 9" fill="none" marker-end="url(#aGray)"/>
+<rect x="855" y="420" width="170" height="140" rx="16" fill="#EAF4FC" stroke="#2878B8" stroke-width="2"/>
+<g fill="none" stroke="#2878B8" stroke-width="3"><rect x="912" y="438" width="55" height="37" rx="4"/><path d="M905 482h69l-8 7h-53z" fill="#2878B8"/></g>
+<text x="940" y="510" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="21" font-weight="700" fill="#203040">새 TCP 연결</text>
+<text x="940" y="537" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="17" font-weight="700" fill="#2878B8">route = active</text>
+<rect x="1080" y="405" width="220" height="170" rx="16" fill="#EEF1F5" stroke="#536779" stroke-width="2"/>
+<circle cx="1166" cy="438" r="6" fill="#536779"/><circle cx="1185" cy="438" r="6" fill="#536779"/><circle cx="1204" cy="438" r="6" fill="#536779"/><path d="M1164 458h44" stroke="#536779" stroke-width="3"/>
+<text x="1190" y="480" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="21" font-weight="700" fill="#203040">실험용 TCP 라우터</text>
+<text x="1190" y="505" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="19" font-weight="700" fill="#2878B8">TCP :4433</text>
+<text x="1190" y="535" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="17" font-weight="700" fill="#7554B8">active → KPQC</text>
+<text x="1190" y="557" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#657587">TLS 종료 안 함</text>
+<rect x="1350" y="280" width="180" height="150" rx="16" fill="#F2EDFB" stroke="#7554B8" stroke-width="2"/>
+<g><rect x="1362" y="298" width="46" height="50" rx="6" fill="#7554B8"/><path d="M1371 311h28M1371 323h28M1371 335h28" stroke="#fff" stroke-width="3"/><circle cx="1370" cy="311" r="2" fill="#fff"/></g>
+<text x="1453" y="368" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="700" fill="#6442A5">KPQC 서버 (active)</text>
+<text x="1453" y="393" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#203040">SMAUG1 + HAETAE2</text>
+<text x="1453" y="416" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="15" font-weight="400" fill="#657587">신규 TLS 연결</text>
+<rect x="1350" y="545" width="180" height="150" rx="16" fill="#F4F5F6" stroke="#9AA5AF" stroke-width="2"/>
+<g><rect x="1362" y="563" width="46" height="50" rx="6" fill="#7B8997"/><path d="M1371 576h28M1371 588h28M1371 600h28" stroke="#fff" stroke-width="3"/><circle cx="1370" cy="576" r="2" fill="#fff"/></g>
+<text x="1453" y="633" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="700" fill="#536779">이전 서버</text>
+<text x="1453" y="658" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="16" font-weight="400" fill="#203040">열린 연결 유지</text>
+<text x="1453" y="682" text-anchor="middle" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="14" font-weight="400" fill="#657587">드레이닝 미측정</text>
+<rect x="40" y="860" width="1520" height="125" rx="18" fill="#F2F5F8" stroke="#D7E0E8" stroke-width="2"/>
+<text x="70" y="895" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="700" fill="#203040">선택자는 시험용 평문 프리앰블이며 TLS ClientHello의 일부가 아니다.</text>
+<text x="70" y="927" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="400" fill="#203040">라우터는 알고리즘을 판별하지 않는다. 승인 후 active에 새로 연결하면 KPQC 서버에 TLS 연결한다.</text>
+<text x="70" y="959" text-anchor="start" font-family="Arial,Apple SD Gothic Neo,Noto Sans KR,sans-serif" font-size="18" font-weight="400" fill="#536779">레거시 전용 클라이언트는 자동으로 레거시 서버에 우회되지 않으며, KPQC 서버와 협상하지 못하면 실패한다.</text>
+</svg>
