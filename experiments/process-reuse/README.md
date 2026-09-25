@@ -19,6 +19,57 @@
 
 재사용은 한 암호 구성의 반복 연결에 적용한다. 새 프로세스 조건에서도 운영체제 캐시를 강제로 비우지는 않는다.
 
+### 코드에서는 어떻게 나뉘는가?
+
+반복 측정 스크립트는 `warm` 여부와 연결 횟수를 작업 요청에 담아 서버와 클라이언트 실행기에 전달한다. `cold`에서는 `warm` 값이 거짓이고, `warm`에서는 참이다. 코드는 [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L68)에 있다.
+
+```python
+count = 5 if mode == 'warm' else 3
+q = {'kem': k, 'signature': s, 'count': count, 'warm': mode == 'warm'}
+worker('server', {'action': 'start', **q})
+cs = worker('client', {'action': 'clients', **q, 'ip': IP})['rows']
+```
+
+클라이언트 실행기는 warm 조건에서 C 시험 프로그램을 한 번 띄워 5개 연결을 처리한다. cold 조건에서는 반복문 안에서 C 프로그램을 연결마다 한 번씩 띄운다. 실제 분기 코드는 [scripts/handshake_worker.py](../../scripts/handshake_worker.py#L45-L64)다.
+
+```python
+if q.get('warm'):
+    env['KPQC_WARM'] = '1'
+    p = subprocess.run([BIN, 'client', q.get('client_kem', k), sigalg(s), str(STATE/f'{s}.crt'), '-', q['ip'], '4433', str(prefix), str(q['count']), q.get('host', 'kpqc-lab.internal')], capture_output=True, timeout=120, env=env)
+else:
+    for i in range(q['count']):
+        p = subprocess.run([BIN, 'client', q.get('client_kem', k), sigalg(q.get('client_signature', s)), str(STATE/f'{q.get("trust_signature", s)}.crt'), '-', q['ip'], '4433', str(path), '1', q.get('host', 'kpqc-lab.internal')], capture_output=True, timeout=25, env=env)
+```
+
+C 프로그램의 `handshake()`는 `KPQC_WARM`이 켜져 있으면 `warm_context`에 저장한 OpenSSL `SSL_CTX` 설정을 재사용한다. 꺼져 있으면 연결 때마다 `context(...)`를 새로 만든다. 두 경우 모두 연결마다 새 SSL 연결 객체 `SSL`을 만든다. [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L148-L155)
+
+```c
+if(getenv("KPQC_WARM")){
+    if(!warm_context)warm_context=context(server,group,sig,cert,key);
+    c=warm_context;SSL_CTX_up_ref(c);
+}else c=context(server,group,sig,cert,key);
+SSL *s=SSL_new(c);  // 연결마다 새 TLS 연결 객체
+```
+
+서버도 cold에서는 `accept()`한 연결을 새 자식 프로세스에서 처리한다. warm에서는 `KPQC_WARM`이 설정되어 있어 서버 프로세스가 반복 연결을 직접 처리한다. [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L298-L307)
+
+```c
+if(getenv("KPQC_WARM")){
+    failed+=handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name)!=0;
+    continue;
+}
+pid_t p=fork();
+if(!p){
+    close(fd);
+    int rc=handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name);
+    _exit(rc);
+}
+close(conn);
+waitpid(p,&status,0);
+```
+
+warm 조건은 연결 5회를 실행하지만 첫 2회는 준비 연결로 표시하고 나머지 3회만 집계한다. 이는 [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L76)의 `count`와 `warmup` 기록에 해당한다. 따라서 ‘프로세스를 계속 켜둔다’는 말은 이 반복 측정 동안 서버·클라이언트 시험 프로그램을 유지한다는 뜻이다. EC2나 컨테이너를 켜고 끄는 조건은 아니다.
+
 ### 측정 순서를 바꾼 이유
 
 새 프로세스 조건을 항상 먼저 측정하면, 재사용 조건은 항상 시간이 지난 뒤 측정된다. 그 사이 CPU 부하나 캐시 상태가 달라질 수 있어, 관측한 차이에 프로세스 재사용뿐 아니라 실행 시점의 영향도 섞일 수 있다.

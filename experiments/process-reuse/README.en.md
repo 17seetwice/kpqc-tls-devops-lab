@@ -19,6 +19,60 @@ Both modes create a new connection and perform a full TLS handshake, including a
 
 Reuse applies within repeated connections for one configuration. Fresh-process mode does not forcibly clear operating-system caches.
 
+### How is this implemented in code?
+
+The measurement script passes the mode and connection count to the server and client workers. `warm` is false for cold mode and true for warm mode. See [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L68).
+
+```python
+count = 5 if mode == 'warm' else 3
+q = {'kem': k, 'signature': s, 'count': count, 'warm': mode == 'warm'}
+worker('server', {'action': 'start', **q})
+cs = worker('client', {'action': 'clients', **q, 'ip': IP})['rows']
+```
+
+In warm mode, the client worker starts the C test program once to handle five connections. In cold mode, it starts the program once per connection inside a loop. See [scripts/handshake_worker.py](../../scripts/handshake_worker.py#L45-L64).
+
+```python
+if q.get('warm'):
+    env['KPQC_WARM'] = '1'
+    p = subprocess.run([BIN, 'client', q.get('client_kem', k), sigalg(s), str(STATE/f'{s}.crt'), '-', q['ip'], '4433', str(prefix), str(q['count']), q.get('host', 'kpqc-lab.internal')], capture_output=True, timeout=120, env=env)
+else:
+    for i in range(q['count']):
+        p = subprocess.run([BIN, 'client', q.get('client_kem', k), sigalg(q.get('client_signature', s)), str(STATE/f'{q.get("trust_signature", s)}.crt'), '-', q['ip'], '4433', str(path), '1', q.get('host', 'kpqc-lab.internal')], capture_output=True, timeout=25, env=env)
+```
+
+In C `handshake()`, `KPQC_WARM` selects either the saved OpenSSL `SSL_CTX` configuration or a newly created context. Both paths create a new per-connection `SSL` object. See [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L148-L155).
+
+```c
+if (getenv("KPQC_WARM")) {
+    if (!warm_context)
+        warm_context = context(server, group, sig, cert, key);
+    c = warm_context;
+} else {
+    c = context(server, group, sig, cert, key);
+}
+SSL *s = SSL_new(c);  // new TLS connection object for each connection
+```
+
+In cold mode, the server handles each accepted connection in a child process. In warm mode, the server process handles repeated connections. See [scripts/tls_handshake.c](../../scripts/tls_handshake.c#L298-L307).
+
+```c
+if(getenv("KPQC_WARM")){
+    failed+=handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name)!=0;
+    continue;
+}
+pid_t p=fork();
+if(!p){
+    close(fd);
+    int rc=handshake(conn,1,argv[2],argv[3],argv[4],argv[5],argv[10],name);
+    _exit(rc);
+}
+close(conn);
+waitpid(p,&status,0);
+```
+
+Warm mode makes five connections: the first two are marked as preparation runs and the next three are analyzed. This is recorded by `count` and `warmup` in [scripts/extended_handshake.py](../../scripts/extended_handshake.py#L62-L76). Here, keeping the process running means retaining the server/client test programs during these repeated measurements; it does not mean restarting or retaining EC2 instances or containers per connection.
+
 ### Why change the measurement order?
 
 If fresh-process trials always run first, reused-process trials are always measured later. CPU load or cache state may change during that interval, mixing execution-time effects with process-reuse effects.
