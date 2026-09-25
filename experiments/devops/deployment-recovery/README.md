@@ -55,15 +55,23 @@ SLO (Service Level Objective)는 시험 전에 정한 서비스 응답 목표다
 
 실험 흐름은 다음과 같다.
 
-1. 고전 암호 서비스가 동작하는 상태에서 최초 KPQC 배포 후보를 만든다. 실제 TLS 접속 시험과 3개 부하 구간을 수행하고, 정책 판정기를 호출한다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
+1. 기존 X25519 + ECDSA P-256 서비스는 `active` 경로에서 계속 동작시킨다. 그 옆에 SMAUG1 + HAETAE2 후보 서버 프로세스를 별도로 시작하고, 별도 포트에 둔다. 이 시점에는 아직 활성 서비스를 교체하지 않는다. 구현: [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
 
    ```python
-   binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
-   q = {"candidate": name, "evidence": evidence, "performance": perf}
-   verdict = worker("server", {"action": "decision", **q})
+   port = state.get("next_port", 24431)
+   state["next_port"] = port + 1
+   procs["candidate"] = launch(name, group, sig, port)
    ```
 
-2. 암호·인증서·성능 기준을 모두 만족하면 후보를 활성 경로로 전환한다. 승격 때 정책을 다시 확인한 다음 활성 서비스 경로를 바꾼다. 구현: [`gate_worker.py`](../../../scripts/gate_worker.py#L196-L208).
+   시험 클라이언트는 서버의 TCP 라우터 `4433`번 포트에 연결해 `candidate` 경로 선택자를 보낸다. 라우터는 선택자를 읽고 후보 서버의 별도 포트로 연결한 다음, 선택자 뒤에 오는 TLS 통신을 중계한다. 선택자는 시험용 라우팅 정보이며 TLS 메시지가 아니다. 그 다음 실제 TLS 핸드셰이크를 해 암호·인증서 정책을 검사한다. 구현: [`tls_handshake.c`](../../../scripts/tls_handshake.c#L164-L169), [`gate_worker.py`](../../../scripts/gate_worker.py#L54-L74).
+
+2. 같은 `candidate` 경로로 고정 도착률 접속 시험을 한다. 후보 하나에 초당 10회씩 10초간 접속을 보내는 시험을 세 번 수행한다. 10초 동안 예정된 접속은 10 × 10 = 100회이며, 따라서 후보 하나당 총 300회다. 이는 클라이언트 컴퓨터 300대가 아니라 시험 클라이언트 한 대에서 생성한 접속 시도다. 10초는 이 설정에서 각 구간에 접속 100회를 만들기 위한 시험 길이다.
+
+   초당 10회는 약 100 ms마다 새 접속을 시작하도록 예약한다. 앞선 접속이 끝날 때까지 기다렸다가 다음 접속을 시작하는 방식이 아니다.
+
+   세 구간은 사전에 정한 실험 정책이다. 각 구간을 따로 판정하며, 세 구간 모두 통과해야 한다. 세 구간은 독립 표본이라고 가정하지 않는다. 초당 10회·10초·세 구간은 금융권 표준이 아니라 이번 모의 서비스 시험에서 정한 부하 조건이다. 암호·인증서 검사와 세 구간의 성능 검사를 모두 통과해야 최종 승인된다. 구현: [`release-slo.json`](../../../policies/release-slo.json), [`release_worker.py`](../../../scripts/release_worker.py#L37-L47), [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L51).
+
+3. 세 구간 결과와 TLS 검사 증적이 모두 정책을 만족하면 후보를 활성 경로로 바꾼다. 승격 직전에도 판정을 다시 하고, 통과할 때만 `active` 경로가 후보를 가리키도록 바꾼다. 기존 연결은 강제로 옮기지 않는다. 구현: [`gate_worker.py`](../../../scripts/gate_worker.py#L196-L208).
 
    ```python
    decision = main({"action": "decision", **q["evidence"]})
@@ -73,7 +81,7 @@ SLO (Service Level Objective)는 시험 전에 정한 서비스 응답 목표다
    state["candidate"] = None
    ```
 
-3. 새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보도 같은 생성·검사·승인 절차를 거친다. 이때 기존 KPQC 서비스는 활성 경로에 남아 복구 대상으로 유지된다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L63), [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
+4. 새 인증서와 별도 서버 프로세스를 가진 후속 업데이트 후보도 같은 방식으로 별도 포트에 띄워 TLS 검사와 세 번의 부하 시험을 거친다. 이때 현재 활성 KPQC 서비스는 그대로 살아 있어 장애 복구 대상으로 유지된다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L41-L63), [`gate_worker.py`](../../../scripts/gate_worker.py#L162-L175).
 
    ```python
    binding = worker("server", {"action": "candidate", "name": name})["route"]["candidate"]
@@ -81,7 +89,7 @@ SLO (Service Level Objective)는 시험 전에 정한 서비스 응답 목표다
    promotion = worker("server", {"action": "promote", **q})
    ```
 
-4. 후속 업데이트 서비스에 장애를 주입한다. 연속 실패를 감지하면 이전 승인 서비스의 현재 TLS 상태를 확인하고 그 서비스로 경로를 복구한다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L75-L87).
+5. 후속 업데이트 서비스에 장애를 주입한다. 연속 실패를 감지하면 이전 승인 서비스에 실제 TLS 연결을 다시 해 인증서와 암호 정책을 확인한 뒤 그 서비스로 경로를 복구한다. 구현: [`release_experiments.py`](../../../scripts/release_experiments.py#L75-L87), [`release_worker.py`](../../../scripts/release_worker.py#L96-L108).
 
    ```python
    t0 = time.monotonic_ns(); D["fault"] = worker("server", {"action": "fault-active"})
