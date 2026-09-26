@@ -175,8 +175,8 @@ docker compose -f compose.gate.yaml run --rm --entrypoint python3 gate /app/scri
 
 ## 배포 흐름
 
-![README1] (/README_1.png)
-![README2] (/README_2.png)
+![README1](/README_1.png)
+![README2](/README_2.png)
 1. 최초 KPQC 배포 후보: 기존 X25519 + ECDSA P-256 서비스를 SMAUG1 + HAETAE2로 전환합니다.
 2. 후속 업데이트 후보: 동일 암호 조합을 유지하면서 새로운 서버 인증서와 별도 서버 프로세스로 갱신합니다. 업무 기능의 변경은 포함하지 않습니다.
 3. 장애 복구: 후속 업데이트에 장애를 주입하고, 이전 승인 서비스의 현재 TLS 연결·인증서·암호 정책을 확인한 뒤 연결 경로를 복구합니다. 복구 후에도 KPQC를 유지합니다.
